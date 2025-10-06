@@ -23,14 +23,14 @@ const Layout = ({ children }: LayoutProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-slate-950">
-      <header className="border-b border-gray-200 bg-white/80 backdrop-blur-sm sticky top-0 z-50 shadow-sm dark:bg-slate-900/80 dark:border-slate-700">
+    <div className="min-h-screen bg-gradient-subtle">
+      <header className="border-b border-border/50 bg-card/80 backdrop-blur-sm sticky top-0 z-50 shadow-soft">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-lg bg-teal-600 flex items-center justify-center dark:bg-teal-500">
+            <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow">
               <Gift className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-teal-700 dark:text-teal-300">
+            <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
               Under Wraps
             </span>
           </div>

@@ -149,24 +149,24 @@ const GroupDetail = () => {
     <Layout>
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">{groupName}</h1>
-          <p className="text-gray-600 dark:text-slate-400">
+          <h1 className="text-3xl font-bold mb-2">{groupName}</h1>
+          <p className="text-muted-foreground">
             Manage members and view wishlists
           </p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <Card>
+          <Card className="shadow-soft">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                  <Users className="w-5 h-5 text-primary" />
                   <CardTitle>Members</CardTitle>
                 </div>
                 <Button
                   size="sm"
                   onClick={() => setInviteDialogOpen(true)}
-                  className="gap-2"
+                  className="gap-2 bg-gradient-primary hover:opacity-90"
                 >
                   <Mail className="w-4 h-4" />
                   Invite
@@ -178,13 +178,13 @@ const GroupDetail = () => {
                 {members.map((member) => (
                   <div
                     key={member.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
+                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
                   >
                     <div>
-                      <p className="font-medium text-slate-900 dark:text-slate-100">{member.name}</p>
-                      <p className="text-sm text-gray-600 dark:text-slate-400">{member.email}</p>
+                      <p className="font-medium">{member.name}</p>
+                      <p className="text-sm text-muted-foreground">{member.email}</p>
                     </div>
-                    <span className="text-xs px-2 py-1 rounded-full bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300">
+                    <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">
                       {member.role}
                     </span>
                   </div>
@@ -193,17 +193,17 @@ const GroupDetail = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-soft">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Gift className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+                  <Gift className="w-5 h-5 text-secondary" />
                   <CardTitle>Wishlists</CardTitle>
                 </div>
                 <Button
                   size="sm"
                   onClick={handleCreateWishlist}
-                  className="gap-2"
+                  className="gap-2 bg-gradient-primary hover:opacity-90"
                 >
                   <Plus className="w-4 h-4" />
                   Create
@@ -213,8 +213,8 @@ const GroupDetail = () => {
             <CardContent>
               {wishlists.length === 0 ? (
                 <div className="text-center py-8">
-                  <Gift className="w-12 h-12 text-gray-400 dark:text-gray-600 mx-auto mb-3" />
-                  <p className="text-sm text-gray-600 dark:text-slate-400">
+                  <Gift className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">
                     No wishlists yet. Create one to get started!
                   </p>
                 </div>
@@ -223,11 +223,11 @@ const GroupDetail = () => {
                   {wishlists.map((wishlist) => (
                     <div
                       key={wishlist.id}
-                      className="p-3 rounded-lg bg-gray-50 hover:bg-gray-100 dark:bg-slate-800 dark:hover:bg-slate-700 cursor-pointer transition-colors"
+                      className="p-3 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
                       onClick={() => navigate(`/wishlists/${wishlist.id}`)}
                     >
-                      <p className="font-medium text-slate-900 dark:text-slate-100">{wishlist.name}</p>
-                      <p className="text-sm text-gray-600 dark:text-slate-400">
+                      <p className="font-medium">{wishlist.name}</p>
+                      <p className="text-sm text-muted-foreground">
                         by {wishlist.user_id === currentUserId ? "You" : wishlist.user_name}
                       </p>
                     </div>
