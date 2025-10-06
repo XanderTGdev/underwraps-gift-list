@@ -124,14 +124,14 @@ const Groups = () => {
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold mb-2">Your Groups</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">Your Groups</h1>
+            <p className="text-gray-600 dark:text-slate-400">
               Manage your gift groups and wishlists
             </p>
           </div>
           <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="gap-2 bg-gradient-primary hover:opacity-90">
+              <Button className="gap-2">
                 <Plus className="w-4 h-4" />
                 Create Group
               </Button>
@@ -160,7 +160,6 @@ const Groups = () => {
                   <Button
                     type="submit"
                     disabled={creating}
-                    className="bg-gradient-primary hover:opacity-90"
                   >
                     {creating ? (
                       <>
@@ -178,18 +177,18 @@ const Groups = () => {
         </div>
 
         {groups.length === 0 ? (
-          <Card className="shadow-soft border-dashed">
+          <Card className="border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-16">
-              <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-4">
-                <Users className="w-10 h-10 text-muted-foreground" />
+              <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
+                <Users className="w-10 h-10 text-gray-400 dark:text-gray-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">No groups yet</h3>
-              <p className="text-muted-foreground text-center mb-6 max-w-md">
+              <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">No groups yet</h3>
+              <p className="text-gray-600 dark:text-slate-400 text-center mb-6 max-w-md">
                 Create your first group to start sharing wishlists with friends and family
               </p>
               <Button
                 onClick={() => setCreateDialogOpen(true)}
-                className="gap-2 bg-gradient-primary hover:opacity-90"
+                className="gap-2"
               >
                 <Plus className="w-4 h-4" />
                 Create Your First Group
@@ -201,13 +200,13 @@ const Groups = () => {
             {groups.map((group) => (
               <Card
                 key={group.id}
-                className="hover:shadow-medium transition-all cursor-pointer border-border/50"
+                className="hover:shadow-lg transition-all cursor-pointer hover:border-teal-500 dark:hover:border-teal-400"
                 onClick={() => navigate(`/groups/${group.id}`)}
               >
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-lg bg-gradient-primary flex items-center justify-center shadow-soft">
+                      <div className="w-12 h-12 rounded-lg bg-teal-600 dark:bg-teal-500 flex items-center justify-center">
                         <Users className="w-6 h-6 text-white" />
                       </div>
                       <div>
