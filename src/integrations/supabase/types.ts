@@ -14,7 +14,290 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      group_members: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      groups: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          owner_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "groups_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invitations: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          group_id: string
+          id: string
+          invitee_email: string
+          inviter_id: string | null
+          status: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          group_id: string
+          id?: string
+          invitee_email: string
+          inviter_id?: string | null
+          status?: string
+          token: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          group_id?: string
+          id?: string
+          invitee_email?: string
+          inviter_id?: string | null
+          status?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitations_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitations_inviter_id_fkey"
+            columns: ["inviter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_claims: {
+        Row: {
+          claimer_id: string
+          created_at: string
+          group_id: string
+          id: string
+          item_id: string
+          note: string | null
+          reveal_date: string
+        }
+        Insert: {
+          claimer_id: string
+          created_at?: string
+          group_id: string
+          id?: string
+          item_id: string
+          note?: string | null
+          reveal_date: string
+        }
+        Update: {
+          claimer_id?: string
+          created_at?: string
+          group_id?: string
+          id?: string
+          item_id?: string
+          note?: string | null
+          reveal_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_claims_claimer_id_fkey"
+            columns: ["claimer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_claims_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_claims_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      items: {
+        Row: {
+          allow_multiple_claims: boolean
+          created_at: string
+          currency: string | null
+          id: string
+          image_url: string | null
+          note: string | null
+          price: number | null
+          quantity: number
+          title: string | null
+          url: string
+          wishlist_id: string
+        }
+        Insert: {
+          allow_multiple_claims?: boolean
+          created_at?: string
+          currency?: string | null
+          id?: string
+          image_url?: string | null
+          note?: string | null
+          price?: number | null
+          quantity?: number
+          title?: string | null
+          url: string
+          wishlist_id: string
+        }
+        Update: {
+          allow_multiple_claims?: boolean
+          created_at?: string
+          currency?: string | null
+          id?: string
+          image_url?: string | null
+          note?: string | null
+          price?: number | null
+          quantity?: number
+          title?: string | null
+          url?: string
+          wishlist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "items_wishlist_id_fkey"
+            columns: ["wishlist_id"]
+            isOneToOne: false
+            referencedRelation: "wishlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string
+          id: string
+          name: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email: string
+          id: string
+          name?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string | null
+        }
+        Relationships: []
+      }
+      wishlists: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          is_default: boolean
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wishlists_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wishlists_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

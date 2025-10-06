@@ -83,7 +83,11 @@ const Wishlist = () => {
 
       if (itemsError) throw itemsError;
 
-      setItems(itemsData || []);
+      const mappedItems = itemsData?.map(item => ({
+        ...item,
+        claims: item.item_claims
+      })) || [];
+      setItems(mappedItems);
     } catch (error: any) {
       toast.error("Failed to load wishlist");
       navigate("/groups");
