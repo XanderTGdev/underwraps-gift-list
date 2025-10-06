@@ -44,7 +44,7 @@ const Index = () => {
             </Button>
             <Button
               size="lg"
-              variant="outline"
+              variant="secondary"
               onClick={() => navigate("/auth")}
             >
               Sign In
@@ -63,7 +63,7 @@ const Index = () => {
             </div>
 
             <div className="p-6 rounded-2xl bg-white border border-gray-200 shadow-sm dark:bg-slate-900 dark:border-slate-700">
-              <div className="w-12 h-12 rounded-lg bg-teal-600 flex items-center justify-center mb-4 mx-auto dark:bg-teal-500">
+              <div className="w-12 h-12 rounded-lg bg-rose-400 flex items-center justify-center mb-4 mx-auto dark:bg-rose-400">
                 <ShieldCheck className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-lg font-semibold mb-2 text-slate-900 dark:text-slate-100">Secret Claims</h3>
