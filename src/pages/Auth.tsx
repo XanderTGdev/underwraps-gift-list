@@ -65,21 +65,21 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-subtle flex items-center justify-center p-4">
+    <div className="min-h-screen bg-stone-50 dark:bg-slate-950 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-primary mb-4 shadow-glow">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-teal-600 mb-4 dark:bg-teal-500">
             <Gift className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold text-teal-700 dark:text-teal-300">
             Under Wraps
           </h1>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-gray-600 dark:text-slate-400 mt-2">
             Secret gift planning made simple
           </p>
         </div>
 
-        <Card className="shadow-medium border-0">
+        <Card>
           <Tabs defaultValue="login" className="w-full">
             <CardHeader>
               <TabsList className="grid w-full grid-cols-2">
@@ -116,7 +116,7 @@ const Auth = () => {
                 <CardFooter>
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-primary hover:opacity-90"
+                    className="w-full"
                     disabled={loading}
                   >
                     {loading ? (
@@ -172,7 +172,7 @@ const Auth = () => {
                 <CardFooter>
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-primary hover:opacity-90"
+                    className="w-full"
                     disabled={loading}
                   >
                     {loading ? (

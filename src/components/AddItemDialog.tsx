@@ -178,7 +178,6 @@ const AddItemDialog = ({ wishlistId, open, onOpenChange, onSuccess }: AddItemDia
           <Button
             onClick={handleSave}
             disabled={!itemData || loading}
-            className="bg-gradient-primary hover:opacity-90"
           >
             {loading ? (
               <>

@@ -67,7 +67,6 @@ const InviteMemberDialog = ({ groupId, open, onOpenChange, onSuccess }: InviteMe
             <Button
               type="submit"
               disabled={loading}
-              className="bg-gradient-primary hover:opacity-90"
             >
               {loading ? (
                 <>

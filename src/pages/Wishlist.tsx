@@ -117,7 +117,7 @@ const Wishlist = () => {
     const myClaim = item.claims.find((c) => c.claimer_id === currentUserId);
     if (myClaim) {
       return (
-        <Badge className="gap-1 bg-success">
+        <Badge variant="claimed" className="gap-1">
           <Gift className="w-3 h-3" />
           You claimed this
         </Badge>
@@ -125,7 +125,7 @@ const Wishlist = () => {
     }
 
     return (
-      <Badge variant="outline" className="gap-1">
+      <Badge variant="claimed" className="gap-1">
         <Gift className="w-3 h-3" />
         Claimed by {item.claims[0].profiles.name}
       </Badge>
@@ -155,7 +155,7 @@ const Wishlist = () => {
           {isOwner && (
             <Button
               onClick={() => setAddDialogOpen(true)}
-              className="gap-2 bg-gradient-primary hover:opacity-90"
+              className="gap-2"
             >
               <Plus className="w-4 h-4" />
               Add Item
@@ -164,11 +164,11 @@ const Wishlist = () => {
         </div>
 
         {items.length === 0 ? (
-          <Card className="shadow-soft border-dashed">
+          <Card className="border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-16">
-              <Gift className="w-16 h-16 text-muted-foreground mb-4" />
-              <h3 className="text-xl font-semibold mb-2">No items yet</h3>
-              <p className="text-muted-foreground text-center mb-6 max-w-md">
+              <Gift className="w-16 h-16 text-gray-400 dark:text-gray-600 mb-4" />
+              <h3 className="text-xl font-semibold mb-2 text-slate-900 dark:text-slate-100">No items yet</h3>
+              <p className="text-gray-600 dark:text-slate-400 text-center mb-6 max-w-md">
                 {isOwner
                   ? "Add your first item to start building your wishlist"
                   : "This wishlist is empty"}
@@ -176,7 +176,7 @@ const Wishlist = () => {
               {isOwner && (
                 <Button
                   onClick={() => setAddDialogOpen(true)}
-                  className="gap-2 bg-gradient-primary hover:opacity-90"
+                  className="gap-2"
                 >
                   <Plus className="w-4 h-4" />
                   Add Your First Item
@@ -187,9 +187,9 @@ const Wishlist = () => {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {items.map((item) => (
-              <Card key={item.id} className="overflow-hidden shadow-soft hover:shadow-medium transition-all">
+              <Card key={item.id} className="overflow-hidden hover:border-teal-500 hover:shadow-lg transition-all">
                 {item.image_url && (
-                  <div className="aspect-video bg-muted overflow-hidden">
+                  <div className="aspect-video bg-gray-100 dark:bg-slate-800 overflow-hidden">
                     <img
                       src={item.image_url}
                       alt={item.title}
@@ -199,9 +199,9 @@ const Wishlist = () => {
                 )}
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-lg line-clamp-2">{item.title}</CardTitle>
+                    <CardTitle className="text-lg line-clamp-2 text-slate-900 dark:text-slate-100">{item.title}</CardTitle>
                     {item.price && (
-                      <span className="text-accent font-bold whitespace-nowrap">
+                      <span className="text-rose-500 dark:text-rose-400 font-bold whitespace-nowrap">
                         {item.currency} {item.price.toFixed(2)}
                       </span>
                     )}
