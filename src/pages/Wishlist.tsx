@@ -229,15 +229,17 @@ const Wishlist = () => {
                       <Badge variant="outline">Qty: {item.quantity}</Badge>
                     )}
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full gap-2"
-                    onClick={() => window.open(item.url, "_blank")}
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    View Item
-                  </Button>
+                  {item.url && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full gap-2"
+                      onClick={() => window.open(item.url, "_blank")}
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      View Item
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             ))}
