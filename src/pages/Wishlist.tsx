@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, ExternalLink, Gift, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import AddItemDialog from "@/components/AddItemDialog";
+import EditItemDialog from "@/components/EditItemDialog";
 
 interface Item {
   id: string;
@@ -31,6 +32,8 @@ const Wishlist = () => {
   const [items, setItems] = useState<Item[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
@@ -187,7 +190,16 @@ const Wishlist = () => {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {items.map((item) => (
-              <Card key={item.id} className="overflow-hidden hover:border-teal-500 hover:shadow-lg transition-all">
+              <Card 
+                key={item.id} 
+                className={`overflow-hidden hover:border-teal-500 hover:shadow-lg transition-all ${isOwner ? 'cursor-pointer' : ''}`}
+                onClick={() => {
+                  if (isOwner) {
+                    setEditingItem(item);
+                    setEditDialogOpen(true);
+                  }
+                }}
+              >
                 {item.image_url && (
                   <div className="aspect-video bg-gray-100 dark:bg-slate-800 overflow-hidden">
                     <img
@@ -237,6 +249,13 @@ const Wishlist = () => {
         wishlistId={wishlistId || ""}
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
+        onSuccess={fetchWishlist}
+      />
+
+      <EditItemDialog
+        item={editingItem}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
         onSuccess={fetchWishlist}
       />
     </Layout>
