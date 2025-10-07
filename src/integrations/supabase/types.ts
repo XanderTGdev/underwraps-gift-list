@@ -193,7 +193,7 @@ export type Database = {
           price: number | null
           quantity: number
           title: string | null
-          url: string
+          url: string | null
           wishlist_id: string
         }
         Insert: {
@@ -206,7 +206,7 @@ export type Database = {
           price?: number | null
           quantity?: number
           title?: string | null
-          url: string
+          url?: string | null
           wishlist_id: string
         }
         Update: {
@@ -219,7 +219,7 @@ export type Database = {
           price?: number | null
           quantity?: number
           title?: string | null
-          url?: string
+          url?: string | null
           wishlist_id?: string
         }
         Relationships: [
