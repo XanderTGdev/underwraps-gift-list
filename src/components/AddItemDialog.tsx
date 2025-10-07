@@ -16,46 +16,30 @@ interface AddItemDialogProps {
 }
 
 const AddItemDialog = ({ wishlistId, open, onOpenChange, onSuccess }: AddItemDialogProps) => {
+  const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(false);
-  const [itemData, setItemData] = useState<any>(null);
+  const [price, setPrice] = useState("");
+  const [currency, setCurrency] = useState("USD");
+  const [imageUrl, setImageUrl] = useState("");
   const [note, setNote] = useState("");
-
-  const handleFetchMetadata = async () => {
-    if (!url) return;
-
-    setFetching(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("fetch-product-metadata", {
-        body: { url },
-      });
-
-      if (error) throw error;
-
-      setItemData(data);
-      toast.success("Product details fetched!");
-    } catch (error: any) {
-      toast.error("Failed to fetch product details. You can still add it manually.");
-      setItemData({ url, title: "", price: null, currency: "USD", image_url: "" });
-    } finally {
-      setFetching(false);
-    }
-  };
+  const [loading, setLoading] = useState(false);
 
   const handleSave = async () => {
-    if (!itemData) return;
+    if (!title.trim()) {
+      toast.error("Title is required");
+      return;
+    }
 
     setLoading(true);
     try {
       const { error } = await supabase.from("items").insert({
         wishlist_id: wishlistId,
-        url: itemData.resolved_url || url,
-        title: itemData.title || url,
-        price: itemData.price,
-        currency: itemData.currency || "USD",
-        image_url: itemData.image_url,
-        note,
+        url: url || null,
+        title: title.trim(),
+        price: price ? parseFloat(price) : null,
+        currency: currency || "USD",
+        image_url: imageUrl || null,
+        note: note || null,
         quantity: 1,
         allow_multiple_claims: false,
       });
@@ -63,8 +47,11 @@ const AddItemDialog = ({ wishlistId, open, onOpenChange, onSuccess }: AddItemDia
       if (error) throw error;
 
       toast.success("Item added to wishlist!");
+      setTitle("");
       setUrl("");
-      setItemData(null);
+      setPrice("");
+      setCurrency("USD");
+      setImageUrl("");
       setNote("");
       onOpenChange(false);
       onSuccess();
@@ -81,103 +68,88 @@ const AddItemDialog = ({ wishlistId, open, onOpenChange, onSuccess }: AddItemDia
         <DialogHeader>
           <DialogTitle>Add Item to Wishlist</DialogTitle>
           <DialogDescription>
-            Paste a product URL to automatically fetch details
+            Enter item details manually
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="item-url">Product URL</Label>
-            <div className="flex gap-2">
+            <Label htmlFor="item-title">Title *</Label>
+            <Input
+              id="item-title"
+              placeholder="Item title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              disabled={loading}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="item-url">Product URL (optional)</Label>
+            <Input
+              id="item-url"
+              type="url"
+              placeholder="https://..."
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              disabled={loading}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="item-price">Price (optional)</Label>
               <Input
-                id="item-url"
-                type="url"
-                placeholder="https://..."
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                disabled={fetching || loading}
+                id="item-price"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                disabled={loading}
               />
-              <Button
-                onClick={handleFetchMetadata}
-                disabled={!url || fetching || loading}
-              >
-                {fetching ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Fetching...
-                  </>
-                ) : (
-                  "Fetch Details"
-                )}
-              </Button>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="item-currency">Currency (optional)</Label>
+              <Input
+                id="item-currency"
+                placeholder="USD"
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                disabled={loading}
+              />
             </div>
           </div>
 
-          {itemData && (
-            <>
-              {itemData.image_url && (
-                <div className="aspect-video bg-muted rounded-lg overflow-hidden">
-                  <img
-                    src={itemData.image_url}
-                    alt={itemData.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              )}
+          <div className="space-y-2">
+            <Label htmlFor="item-image">Image URL (optional)</Label>
+            <Input
+              id="item-image"
+              type="url"
+              placeholder="https://..."
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              disabled={loading}
+            />
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="item-title">Title</Label>
-                <Input
-                  id="item-title"
-                  value={itemData.title}
-                  onChange={(e) => setItemData({ ...itemData, title: e.target.value })}
-                  disabled={loading}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="item-price">Price</Label>
-                  <Input
-                    id="item-price"
-                    type="number"
-                    step="0.01"
-                    value={itemData.price || ""}
-                    onChange={(e) =>
-                      setItemData({ ...itemData, price: parseFloat(e.target.value) })
-                    }
-                    disabled={loading}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="item-currency">Currency</Label>
-                  <Input
-                    id="item-currency"
-                    value={itemData.currency}
-                    onChange={(e) => setItemData({ ...itemData, currency: e.target.value })}
-                    disabled={loading}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="item-note">Note (optional)</Label>
-                <Textarea
-                  id="item-note"
-                  placeholder="Add a note about this item..."
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-            </>
-          )}
+          <div className="space-y-2">
+            <Label htmlFor="item-note">Note (optional)</Label>
+            <Textarea
+              id="item-note"
+              placeholder="Add a note about this item..."
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              disabled={loading}
+            />
+          </div>
         </div>
 
         <DialogFooter>
           <Button
             onClick={handleSave}
-            disabled={!itemData || loading}
+            disabled={!title.trim() || loading}
           >
             {loading ? (
               <>
