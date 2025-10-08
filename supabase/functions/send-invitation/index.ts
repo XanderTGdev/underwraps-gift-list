@@ -40,9 +40,15 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Authenticating request with JWT token...");
 
+    // Create Supabase client with user's JWT token for proper RLS context
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      {
+        global: {
+          headers: { Authorization: authHeader },
+        },
+      }
     );
 
     // Pass the JWT token directly to getUser() for proper authentication
