@@ -27,26 +27,32 @@ const handler = async (req: Request): Promise<Response> => {
     // 1. Authenticate the user
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
+      console.error("Missing Authorization header");
       throw new Error("Missing authorization header");
     }
 
+    // Extract JWT token from "Bearer <token>" format
+    const jwtToken = authHeader.replace("Bearer ", "");
+    if (!jwtToken || jwtToken === authHeader) {
+      console.error("Malformed Authorization header - missing Bearer prefix");
+      throw new Error("Invalid authorization header format");
+    }
+
+    console.log("Authenticating request with JWT token...");
+
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      {
-        global: {
-          headers: { Authorization: authHeader },
-        },
-      }
+      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
     );
 
+    // Pass the JWT token directly to getUser() for proper authentication
     const {
       data: { user },
       error: userError,
-    } = await supabaseClient.auth.getUser();
+    } = await supabaseClient.auth.getUser(jwtToken);
 
     if (userError || !user) {
-      console.error("Authentication error:", userError);
+      console.error("Authentication failed:", userError?.message || "No user found");
       throw new Error("Unauthorized");
     }
 
