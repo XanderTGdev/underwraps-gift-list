@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Users, Mail, Gift, Plus } from "lucide-react";
 import { toast } from "sonner";
 import InviteMemberDialog from "@/components/InviteMemberDialog";
+import { maskEmail } from "@/lib/email-utils";
 
 interface Member {
   id: string;
@@ -33,6 +34,7 @@ const GroupDetail = () => {
   const [wishlists, setWishlists] = useState<Wishlist[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -59,10 +61,23 @@ const GroupDetail = () => {
       if (groupError) throw groupError;
       setGroupName(group.name);
 
+      // Check if current user is admin/owner
+      if (currentUserId) {
+        const { data: userRole } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("group_id", groupId)
+          .eq("user_id", currentUserId)
+          .single();
+        
+        setIsAdmin(userRole?.role === 'owner' || userRole?.role === 'admin');
+      }
+
+      // Fetch members with their roles from user_roles table
       const { data: membersData, error: membersError } = await supabase
         .from("group_members")
         .select(`
-          role,
+          user_id,
           profiles (
             id,
             name,
@@ -73,11 +88,19 @@ const GroupDetail = () => {
 
       if (membersError) throw membersError;
 
+      // Fetch roles separately from user_roles table
+      const { data: rolesData } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .eq("group_id", groupId);
+
+      const rolesMap = new Map(rolesData?.map(r => [r.user_id, r.role]) || []);
+
       const membersList = membersData?.map((m: any) => ({
         id: m.profiles.id,
         name: m.profiles.name,
         email: m.profiles.email,
-        role: m.role,
+        role: rolesMap.get(m.user_id) || 'member',
       })) || [];
 
       setMembers(membersList);
@@ -183,7 +206,12 @@ const GroupDetail = () => {
                   >
                     <div>
                       <p className="font-medium text-slate-900 dark:text-slate-100">{member.name}</p>
-                      <p className="text-sm text-gray-600 dark:text-slate-400">{member.email}</p>
+                      <p className="text-sm text-gray-600 dark:text-slate-400">
+                        {/* Show full email only if viewing own profile or if viewer is admin */}
+                        {member.id === currentUserId || isAdmin 
+                          ? member.email 
+                          : maskEmail(member.email)}
+                      </p>
                     </div>
                     <Badge className="bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300">
                       {member.role}

@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Gift, Loader2 } from "lucide-react";
+import { Gift, Loader2, Shield, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { Progress } from "@/components/ui/progress";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -17,6 +18,24 @@ const Auth = () => {
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupName, setSignupName] = useState("");
+  
+  // Password strength calculation
+  const calculatePasswordStrength = (password: string): { score: number; label: string; color: string } => {
+    let score = 0;
+    if (password.length >= 12) score += 25;
+    if (password.length >= 16) score += 15;
+    if (/[a-z]/.test(password)) score += 15;
+    if (/[A-Z]/.test(password)) score += 15;
+    if (/[0-9]/.test(password)) score += 15;
+    if (/[^a-zA-Z0-9]/.test(password)) score += 15;
+    
+    if (score < 40) return { score, label: "Weak", color: "bg-red-500" };
+    if (score < 70) return { score, label: "Fair", color: "bg-yellow-500" };
+    if (score < 90) return { score, label: "Good", color: "bg-blue-500" };
+    return { score, label: "Strong", color: "bg-green-500" };
+  };
+  
+  const passwordStrength = calculatePasswordStrength(signupPassword);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,8 +184,35 @@ const Auth = () => {
                       value={signupPassword}
                       onChange={(e) => setSignupPassword(e.target.value)}
                       required
-                      minLength={6}
+                      minLength={12}
+                      placeholder="Minimum 12 characters"
                     />
+                    <p className="text-xs text-gray-600 dark:text-slate-400 flex items-center gap-1">
+                      <Shield className="w-3 h-3" />
+                      Use at least 12 characters with mix of letters, numbers & symbols
+                    </p>
+                    {signupPassword && (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-600 dark:text-slate-400">Password strength:</span>
+                          <span className={`font-medium ${
+                            passwordStrength.score < 40 ? 'text-red-600' :
+                            passwordStrength.score < 70 ? 'text-yellow-600' :
+                            passwordStrength.score < 90 ? 'text-blue-600' :
+                            'text-green-600'
+                          }`}>
+                            {passwordStrength.label}
+                          </span>
+                        </div>
+                        <Progress value={passwordStrength.score} className="h-1.5" />
+                      </div>
+                    )}
+                    {signupPassword && signupPassword.length < 12 && (
+                      <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        Password must be at least 12 characters
+                      </p>
+                    )}
                   </div>
                 </CardContent>
                 <CardFooter>
