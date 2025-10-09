@@ -73,7 +73,7 @@ const GroupDetail = () => {
         setIsAdmin(userRole?.role === 'owner' || userRole?.role === 'admin');
       }
 
-      // Fetch members with their roles from user_roles table
+      // Fetch members with their profiles
       const { data: membersData, error: membersError } = await supabase
         .from("group_members")
         .select(`
@@ -97,9 +97,9 @@ const GroupDetail = () => {
       const rolesMap = new Map(rolesData?.map(r => [r.user_id, r.role]) || []);
 
       const membersList = membersData?.map((m: any) => ({
-        id: m.profiles.id,
-        name: m.profiles.name,
-        email: m.profiles.email,
+        id: m.profiles?.id,
+        name: m.profiles?.name || 'Unknown',
+        email: m.profiles?.email || '',
         role: rolesMap.get(m.user_id) || 'member',
       })) || [];
 
@@ -210,7 +210,7 @@ const GroupDetail = () => {
                         {/* Show full email only if viewing own profile or if viewer is admin */}
                         {member.id === currentUserId || isAdmin 
                           ? member.email 
-                          : maskEmail(member.email)}
+                          : <span className="italic">Email hidden</span>}
                       </p>
                     </div>
                     <Badge className="bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300">
