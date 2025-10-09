@@ -93,7 +93,6 @@ const Groups = () => {
         .insert({
           group_id: group.id,
           user_id: userId,
-          role: "owner",
         });
 
       if (memberError) throw memberError;

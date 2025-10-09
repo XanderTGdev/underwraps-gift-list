@@ -48,13 +48,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "group_members_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_secure"
-            referencedColumns: ["id"]
-          },
         ]
       }
       groups: {
@@ -82,13 +75,6 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "groups_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_secure"
             referencedColumns: ["id"]
           },
         ]
@@ -139,13 +125,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "invitations_inviter_id_fkey"
-            columns: ["inviter_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_secure"
-            referencedColumns: ["id"]
-          },
         ]
       }
       item_claims: {
@@ -182,13 +161,6 @@ export type Database = {
             columns: ["claimer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "item_claims_claimer_id_fkey"
-            columns: ["claimer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_secure"
             referencedColumns: ["id"]
           },
           {
@@ -353,41 +325,11 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "wishlists_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_secure"
-            referencedColumns: ["id"]
-          },
         ]
       }
     }
     Views: {
-      profiles_secure: {
-        Row: {
-          avatar_url: string | null
-          created_at: string | null
-          email: string | null
-          id: string | null
-          name: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string | null
-          email?: never
-          id?: string | null
-          name?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string | null
-          email?: never
-          id?: string | null
-          name?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       can_view_email: {

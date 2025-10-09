@@ -114,7 +114,6 @@ export default function AcceptInvite() {
         .insert({
           group_id: invitation.group_id,
           user_id: user.id,
-          role: 'member'
         });
 
       if (memberError) {
