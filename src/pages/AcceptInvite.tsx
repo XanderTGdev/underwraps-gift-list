@@ -35,26 +35,32 @@ export default function AcceptInvite() {
       setIsAuthenticated(!!user);
       setUserEmail(user?.email || "");
 
-      // Fetch invitation details
-      const { data: inviteData, error: inviteError } = await supabase
-        .from("invitations")
-        .select(`
-          *,
-          groups (
-            id,
-            name
-          )
-        `)
-        .eq("token", token)
-        .single();
+      // Use secure server-side token validation
+      // This prevents token exposure through client-side queries
+      const { data: validationData, error: validationError } = await supabase
+        .rpc('validate_invitation_token', {
+          _token: token,
+          _user_email: user?.email || ""
+        });
 
-      if (inviteError || !inviteData) {
+      if (validationError || !validationData || validationData.length === 0) {
         setStatus('invalid');
         return;
       }
 
-      setInvitation(inviteData);
-      setGroupName(inviteData.groups?.name || "Unknown Group");
+      const inviteData = validationData[0];
+      
+      // Create invitation object matching expected format
+      const invitation = {
+        id: inviteData.invitation_id,
+        group_id: inviteData.group_id,
+        invitee_email: inviteData.invitee_email,
+        status: inviteData.status,
+        expires_at: inviteData.expires_at,
+      };
+
+      setInvitation(invitation);
+      setGroupName(inviteData.group_name || "Unknown Group");
 
       // Check if already accepted
       if (inviteData.status === 'accepted') {
@@ -68,8 +74,8 @@ export default function AcceptInvite() {
         return;
       }
 
-      // Check if pending
-      if (inviteData.status === 'pending') {
+      // Check validation result
+      if (inviteData.is_valid) {
         setStatus('valid');
         return;
       }
