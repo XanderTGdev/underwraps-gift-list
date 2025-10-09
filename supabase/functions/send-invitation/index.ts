@@ -82,7 +82,7 @@ const handler = async (req: Request): Promise<Response> => {
     // 3. Verify user is a member of the group
     const { data: membership, error: membershipError } = await supabaseClient
       .from("group_members")
-      .select("role")
+      .select("id")
       .eq("group_id", groupId)
       .eq("user_id", user.id)
       .single();
@@ -92,7 +92,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("You are not a member of this group");
     }
 
-    console.log("User membership verified:", membership.role);
+    console.log("User membership verified");
 
     // 4. Get group details for email
     const { data: group, error: groupError } = await supabaseClient
