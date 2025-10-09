@@ -51,6 +51,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "group_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_email"
+            referencedColumns: ["id"]
+          },
         ]
       }
       groups: {
@@ -78,6 +85,13 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "groups_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_email"
             referencedColumns: ["id"]
           },
         ]
@@ -128,6 +142,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "invitations_inviter_id_fkey"
+            columns: ["inviter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_email"
+            referencedColumns: ["id"]
+          },
         ]
       }
       item_claims: {
@@ -164,6 +185,13 @@ export type Database = {
             columns: ["claimer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_claims_claimer_id_fkey"
+            columns: ["claimer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_email"
             referencedColumns: ["id"]
           },
           {
@@ -296,19 +324,57 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "wishlists_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_email"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
     Views: {
-      [_ in never]: never
+      profiles_with_email: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string | null
+          id: string | null
+          name: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: never
+          id?: string | null
+          name?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: never
+          id?: string | null
+          name?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      can_view_email: {
+        Args: { _profile_id: string; _viewer_id: string }
+        Returns: boolean
+      }
       get_user_group_role: {
         Args: { _group_id: string; _user_id: string }
         Returns: string
       }
       is_group_member: {
         Args: { _group_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_reveal_date_reached: {
+        Args: { _reveal_date: string }
         Returns: boolean
       }
       users_share_group: {
