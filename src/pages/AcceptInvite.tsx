@@ -125,10 +125,18 @@ export default function AcceptInvite() {
         });
 
       if (memberError) {
-        console.error("Group member insert error:", memberError);
+        console.error("Group member insert error details:", {
+          code: memberError.code,
+          message: memberError.message,
+          details: memberError.details,
+          hint: memberError.hint
+        });
+        
         if (memberError.code === '23505') { // Unique constraint violation
           toast.error("You are already a member of this group");
+          // Still update invitation status to accepted
         } else {
+          toast.error(`Failed to join group: ${memberError.message}`);
           throw memberError;
         }
       }
@@ -140,7 +148,13 @@ export default function AcceptInvite() {
         .eq("id", invitation.id);
 
       if (updateError) {
-        console.error("Update invitation error:", updateError);
+        console.error("Update invitation error details:", {
+          code: updateError.code,
+          message: updateError.message,
+          details: updateError.details,
+          hint: updateError.hint
+        });
+        toast.error(`Failed to update invitation: ${updateError.message}`);
         throw updateError;
       }
 

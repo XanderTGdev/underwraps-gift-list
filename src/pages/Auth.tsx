@@ -130,6 +130,10 @@ const Auth = () => {
 
       if (error) throw error;
       toast.success("Account created! Please check your email.");
+      
+      // Wait a moment for the session to be fully established
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       navigate(redirectUrl);
     } catch (error: any) {
       toast.error(error.message || "Failed to sign up");
@@ -156,7 +160,7 @@ const Auth = () => {
         </div>
 
         <Card>
-          <Tabs defaultValue="login" className="w-full">
+          <Tabs defaultValue={inviteGroup ? "signup" : "login"} className="w-full">
             <CardHeader>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Sign In</TabsTrigger>
