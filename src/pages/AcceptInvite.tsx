@@ -116,6 +116,16 @@ export default function AcceptInvite() {
         return;
       }
 
+      // Debug: Check invitation and user details before inserting
+      console.log("DEBUG: About to insert group member", {
+        group_id: invitation.group_id,
+        user_id: user.id,
+        user_email: user.email,
+        invitation_email: invitation.invitee_email,
+        invitation_status: invitation.status,
+        invitation_expires_at: invitation.expires_at
+      });
+
       // Add user to group
       const { error: memberError } = await supabase
         .from("group_members")
@@ -129,7 +139,11 @@ export default function AcceptInvite() {
           code: memberError.code,
           message: memberError.message,
           details: memberError.details,
-          hint: memberError.hint
+          hint: memberError.hint,
+          user_id: user.id,
+          user_email: user.email,
+          group_id: invitation.group_id,
+          invitation_email: invitation.invitee_email
         });
         
         if (memberError.code === '23505') { // Unique constraint violation
