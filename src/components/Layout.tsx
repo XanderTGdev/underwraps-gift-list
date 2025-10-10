@@ -1,8 +1,8 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Gift, LogOut, Users } from "lucide-react";
+import { Gift, LogOut, Users, Shield } from "lucide-react";
 import { toast } from "sonner";
 
 interface LayoutProps {
@@ -11,6 +11,25 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) return;
+
+      const { data, error } = await supabase.rpc("is_global_admin", {
+        _user_id: user.id,
+      });
+
+      if (!error && data) {
+        setIsAdmin(true);
+      }
+    };
+
+    checkAdminStatus();
+  }, []);
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
@@ -45,6 +64,17 @@ const Layout = ({ children }: LayoutProps) => {
               <Users className="w-4 h-4" />
               Groups
             </Button>
+            {isAdmin && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/admin")}
+                className="gap-2"
+              >
+                <Shield className="w-4 h-4" />
+                Admin
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
