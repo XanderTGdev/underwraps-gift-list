@@ -9,6 +9,7 @@ import Groups from "./pages/Groups";
 import GroupDetail from "./pages/GroupDetail";
 import Wishlist from "./pages/Wishlist";
 import AcceptInvite from "./pages/AcceptInvite";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/groups/:groupId" element={<GroupDetail />} />
           <Route path="/wishlists/:wishlistId" element={<Wishlist />} />
           <Route path="/accept-invite" element={<AcceptInvite />} />
+          <Route path="/admin" element={<Admin />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
