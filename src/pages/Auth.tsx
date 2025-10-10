@@ -1,17 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Gift, Loader2, Shield, AlertCircle } from "lucide-react";
+import { Gift, Loader2, Shield, AlertCircle, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 
 const Auth = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectUrl = searchParams.get("redirect") || "/groups";
+  const inviteGroup = searchParams.get("inviteGroup");
   const [loading, setLoading] = useState(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -37,6 +40,17 @@ const Auth = () => {
   
   const passwordStrength = calculatePasswordStrength(signupPassword);
 
+  // Check if already authenticated and redirect
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        navigate(redirectUrl);
+      }
+    };
+    checkAuth();
+  }, [navigate, redirectUrl]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -49,7 +63,7 @@ const Auth = () => {
 
       if (error) throw error;
       toast.success("Welcome back!");
-      navigate("/groups");
+      navigate(redirectUrl);
     } catch (error: any) {
       toast.error(error.message || "Failed to sign in");
     } finally {
@@ -69,13 +83,13 @@ const Auth = () => {
           data: {
             name: signupName,
           },
-          emailRedirectTo: `${window.location.origin}/groups`,
+          emailRedirectTo: `${window.location.origin}${redirectUrl}`,
         },
       });
 
       if (error) throw error;
       toast.success("Account created! Please check your email.");
-      navigate("/groups");
+      navigate(redirectUrl);
     } catch (error: any) {
       toast.error(error.message || "Failed to sign up");
     } finally {
@@ -88,13 +102,15 @@ const Auth = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-teal-600 mb-4 dark:bg-teal-500">
-            <Gift className="w-8 h-8 text-white" />
+            {inviteGroup ? <Mail className="w-8 h-8 text-white" /> : <Gift className="w-8 h-8 text-white" />}
           </div>
           <h1 className="text-4xl font-bold text-teal-700 dark:text-teal-300">
-            Under Wraps
+            {inviteGroup ? "You're Invited!" : "Under Wraps"}
           </h1>
           <p className="text-gray-600 dark:text-slate-400 mt-2">
-            Secret gift planning made simple
+            {inviteGroup 
+              ? `Sign in or create an account to join ${inviteGroup}` 
+              : "Secret gift planning made simple"}
           </p>
         </div>
 

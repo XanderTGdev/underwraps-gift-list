@@ -76,6 +76,12 @@ export default function AcceptInvite() {
 
       // Check validation result
       if (inviteData.is_valid) {
+        // If valid but not authenticated, redirect to auth page with invitation context
+        if (!user) {
+          const redirectUrl = `/auth?redirect=${encodeURIComponent(`/accept-invite?token=${token}`)}&inviteGroup=${encodeURIComponent(inviteData.group_name || "a group")}`;
+          navigate(redirectUrl);
+          return;
+        }
         setStatus('valid');
         return;
       }
@@ -233,28 +239,8 @@ export default function AcceptInvite() {
     );
   }
 
-  if (status === 'valid' && !isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle>Join {groupName}</CardTitle>
-            <CardDescription>
-              You've been invited to join this group. Please log in or sign up to accept the invitation.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground text-center">
-              Invited email: <strong>{invitation?.invitee_email}</strong>
-            </p>
-            <Button onClick={handleLogin} className="w-full">
-              Log In to Accept
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // This state is now handled by automatic redirect in checkAuthAndInvitation
+  // No need to show UI - user will be redirected to auth page
 
   if (status === 'valid' && isAuthenticated) {
     return (
