@@ -336,6 +336,10 @@ export type Database = {
         Args: { _profile_id: string; _viewer_id: string }
         Returns: boolean
       }
+      get_current_user_email: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_user_group_role: {
         Args: { _group_id: string; _user_id: string }
         Returns: string
