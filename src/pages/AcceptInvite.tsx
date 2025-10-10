@@ -35,32 +35,34 @@ export default function AcceptInvite() {
       setIsAuthenticated(!!user);
       setUserEmail(user?.email || "");
 
-      // Use secure server-side token validation
-      // This prevents token exposure through client-side queries
-      const { data: validationData, error: validationError } = await supabase
-        .rpc('validate_invitation_token', {
-          _token: token,
-          _user_email: user?.email || ""
-        });
+      // Use secure server-side token validation via edge function
+      // This uses service role credentials server-side to bypass RLS
+      const { data: validationData, error: validationError } = await supabase.functions.invoke(
+        'validate-invitation',
+        {
+          body: { token }
+        }
+      );
 
-      if (validationError || !validationData || validationData.length === 0) {
-        setStatus('invalid');
+      if (validationError || !validationData?.success) {
+        console.error("Validation error:", validationError);
+        setStatus(validationData?.status || 'invalid');
         return;
       }
 
-      const inviteData = validationData[0];
+      const inviteData = validationData.invitation;
       
       // Create invitation object matching expected format
       const invitation = {
-        id: inviteData.invitation_id,
-        group_id: inviteData.group_id,
-        invitee_email: inviteData.invitee_email,
+        id: inviteData.id,
+        group_id: inviteData.groupId,
+        invitee_email: inviteData.inviteeEmail,
         status: inviteData.status,
-        expires_at: inviteData.expires_at,
+        expires_at: inviteData.expiresAt,
       };
 
       setInvitation(invitation);
-      setGroupName(inviteData.group_name || "Unknown Group");
+      setGroupName(inviteData.groupName || "Unknown Group");
 
       // Check if already accepted
       if (inviteData.status === 'accepted') {
@@ -69,16 +71,16 @@ export default function AcceptInvite() {
       }
 
       // Check if expired
-      if (new Date(inviteData.expires_at) < new Date()) {
+      if (inviteData.isExpired) {
         setStatus('expired');
         return;
       }
 
       // Check validation result
-      if (inviteData.is_valid) {
+      if (inviteData.isValid) {
         // If valid but not authenticated, redirect to auth page with invitation context
         if (!user) {
-          const redirectUrl = `/auth?redirect=${encodeURIComponent(`/accept-invite?token=${token}`)}&inviteGroup=${encodeURIComponent(inviteData.group_name || "a group")}`;
+          const redirectUrl = `/auth?redirect=${encodeURIComponent(`/accept-invite?token=${token}`)}&inviteGroup=${encodeURIComponent(inviteData.groupName || "a group")}`;
           navigate(redirectUrl);
           return;
         }

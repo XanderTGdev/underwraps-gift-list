@@ -1,0 +1,138 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+
+// CORS headers for browser requests
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+interface ValidationRequest {
+  token: string;
+}
+
+const handler = async (req: Request): Promise<Response> => {
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    // Parse request body
+    const { token }: ValidationRequest = await req.json();
+
+    if (!token) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Invitation token is required",
+        }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        }
+      );
+    }
+
+    console.log("Validating invitation token");
+
+    // Create Supabase client with service role key for RLS bypass
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    );
+
+    // Query invitation with service role (bypasses RLS)
+    const { data: invitation, error: invitationError } = await supabaseAdmin
+      .from("invitations")
+      .select("id, group_id, invitee_email, status, expires_at, groups(name)")
+      .eq("token", token)
+      .single();
+
+    if (invitationError || !invitation) {
+      console.log("Invitation not found or error:", invitationError);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          status: "invalid",
+          error: "Invalid invitation",
+        }),
+        {
+          status: 404,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        }
+      );
+    }
+
+    // Check if invitation is expired
+    const isExpired = new Date(invitation.expires_at) < new Date();
+    
+    // Check if invitation is valid
+    const isValid = invitation.status === "pending" && !isExpired;
+
+    console.log("Invitation validation result:", {
+      invitationId: invitation.id,
+      status: invitation.status,
+      isExpired,
+      isValid,
+    });
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        invitation: {
+          id: invitation.id,
+          groupId: invitation.group_id,
+          groupName: invitation.groups?.name || "Unknown Group",
+          inviteeEmail: invitation.invitee_email,
+          status: invitation.status,
+          expiresAt: invitation.expires_at,
+          isValid,
+          isExpired: invitation.status === "pending" && isExpired ? true : false,
+        },
+      }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
+      }
+    );
+  } catch (error: any) {
+    // Log detailed error server-side for debugging
+    console.error("Error in validate-invitation function:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
+
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: "Unable to validate invitation. Please try again later.",
+      }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
+      }
+    );
+  }
+};
+
+serve(handler);

@@ -252,12 +252,38 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
   } catch (error: any) {
-    console.error("Error in send-invitation function:", error);
+    // Log detailed error server-side for debugging
+    console.error("Error in send-invitation function:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
+    // Map to user-safe error messages
+    const userMessage = (() => {
+      if (error.message === "Unauthorized" || error.message === "Missing authorization header" || error.message === "Invalid authorization header format") {
+        return "Authentication required";
+      }
+      if (error.message?.includes("not a member")) {
+        return "You don't have permission to invite members to this group";
+      }
+      if (error.message?.includes("Invalid email")) {
+        return "Please provide a valid email address";
+      }
+      if (error.message?.includes("Missing required fields")) {
+        return "Please provide all required information";
+      }
+      if (error.message?.includes("Group not found")) {
+        return "Group not found";
+      }
+      // Generic fallback - don't expose internal details
+      return "Unable to send invitation. Please try again later.";
+    })();
     
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message || "An unexpected error occurred",
+        error: userMessage,
       }),
       {
         status: error.message === "Unauthorized" ? 401 : 400,

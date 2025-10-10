@@ -9,6 +9,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Gift, Loader2, Shield, AlertCircle, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
+import { z } from "zod";
+
+const loginSchema = z.object({
+  email: z.string().trim().email({ message: "Invalid email address" }).max(255),
+  password: z.string().min(1, { message: "Password is required" })
+});
+
+const signupSchema = z.object({
+  name: z.string().trim().min(1, { message: "Name is required" }).max(100, { message: "Name must be less than 100 characters" }),
+  email: z.string().trim().email({ message: "Invalid email address" }).max(255),
+  password: z.string()
+    .min(12, { message: "Password must be at least 12 characters" })
+    .regex(/[A-Z]/, { message: "Password must include an uppercase letter" })
+    .regex(/[a-z]/, { message: "Password must include a lowercase letter" })
+    .regex(/[0-9]/, { message: "Password must include a number" })
+});
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -53,12 +69,24 @@ const Auth = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate with Zod
+    const validation = loginSchema.safeParse({
+      email: loginEmail.trim(),
+      password: loginPassword
+    });
+    
+    if (!validation.success) {
+      toast.error(validation.error.errors[0].message);
+      return;
+    }
+    
     setLoading(true);
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email: loginEmail,
-        password: loginPassword,
+        email: validation.data.email,
+        password: validation.data.password,
       });
 
       if (error) throw error;
@@ -73,15 +101,28 @@ const Auth = () => {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate with Zod
+    const validation = signupSchema.safeParse({
+      name: signupName.trim(),
+      email: signupEmail.trim(),
+      password: signupPassword
+    });
+    
+    if (!validation.success) {
+      toast.error(validation.error.errors[0].message);
+      return;
+    }
+    
     setLoading(true);
 
     try {
       const { error } = await supabase.auth.signUp({
-        email: signupEmail,
-        password: signupPassword,
+        email: validation.data.email,
+        password: validation.data.password,
         options: {
           data: {
-            name: signupName,
+            name: validation.data.name,
           },
           emailRedirectTo: `${window.location.origin}${redirectUrl}`,
         },

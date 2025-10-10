@@ -6,6 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
+
+const inviteSchema = z.object({
+  email: z.string()
+    .trim()
+    .email({ message: "Invalid email address" })
+    .max(255, { message: "Email must be less than 255 characters" })
+});
 
 interface InviteMemberDialogProps {
   groupId: string;
@@ -20,11 +28,19 @@ const InviteMemberDialog = ({ groupId, open, onOpenChange, onSuccess }: InviteMe
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate email with Zod
+    const validation = inviteSchema.safeParse({ email: email.trim() });
+    if (!validation.success) {
+      toast.error(validation.error.errors[0].message);
+      return;
+    }
+    
     setLoading(true);
 
     try {
       const { data, error } = await supabase.functions.invoke("send-invitation", {
-        body: { groupId, inviteeEmail: email },
+        body: { groupId, inviteeEmail: validation.data.email },
       });
 
       if (error) throw error;
