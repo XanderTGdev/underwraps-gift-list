@@ -125,6 +125,7 @@ export default function AcceptInvite() {
         });
 
       if (memberError) {
+        console.error("Group member insert error:", memberError);
         if (memberError.code === '23505') { // Unique constraint violation
           toast.error("You are already a member of this group");
         } else {
@@ -138,7 +139,10 @@ export default function AcceptInvite() {
         .update({ status: 'accepted' })
         .eq("id", invitation.id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error("Update invitation error:", updateError);
+        throw updateError;
+      }
 
       toast.success(`You've joined ${groupName}!`);
       setStatus('accepted');
