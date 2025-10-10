@@ -10,9 +10,10 @@ AS $$
   SELECT email FROM auth.users WHERE id = auth.uid();
 $$;
 
--- Drop the old restrictive "Group owners and admins can add members" policy if it exists
+-- Drop the old restrictive admin-only policies if they exist
 -- (from earlier migrations before invitation support was added)
 DROP POLICY IF EXISTS "Group owners and admins can add members" ON public.group_members;
+DROP POLICY IF EXISTS "Group admins can add members" ON public.group_members;
 
 -- Drop and recreate the invitation policy to ensure it's properly configured
 DROP POLICY IF EXISTS "Invited users can add themselves when accepting invitations" ON public.group_members;
