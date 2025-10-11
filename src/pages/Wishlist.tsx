@@ -97,7 +97,17 @@ const Wishlist = () => {
         ...item,
         claims: item.item_claims
       })) || [];
-      setItems(mappedItems);
+      
+      // Sort items: unclaimed first, then claimed
+      const sortedItems = mappedItems.sort((a, b) => {
+        const aIsClaimed = a.claims && a.claims.length > 0 && !a.allow_multiple_claims;
+        const bIsClaimed = b.claims && b.claims.length > 0 && !b.allow_multiple_claims;
+        
+        if (aIsClaimed === bIsClaimed) return 0;
+        return aIsClaimed ? 1 : -1;
+      });
+      
+      setItems(sortedItems);
     } catch (error: any) {
       toast.error("Failed to load wishlist");
       navigate("/groups");
@@ -170,6 +180,10 @@ const Wishlist = () => {
     return item.claims?.find((c) => c.claimer_id === currentUserId);
   };
 
+  const isItemFullyClaimed = (item: Item) => {
+    return item.claims && item.claims.length > 0 && !item.allow_multiple_claims;
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -224,10 +238,20 @@ const Wishlist = () => {
           </Card>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {items.map((item) => (
+            {items.map((item) => {
+              const isFullyClaimed = isItemFullyClaimed(item);
+              const isUserClaim = getUserClaim(item);
+              
+              return (
               <Card 
                 key={item.id} 
-                className={`overflow-hidden hover:border-teal-500 hover:shadow-lg transition-all ${isOwner ? 'cursor-pointer' : ''}`}
+                className={`overflow-hidden transition-all ${
+                  isOwner ? 'cursor-pointer' : ''
+                } ${
+                  isFullyClaimed && !isUserClaim 
+                    ? 'opacity-50 grayscale' 
+                    : 'hover:border-teal-500 hover:shadow-lg'
+                }`}
                 onClick={() => {
                   if (isOwner) {
                     setEditingItem(item);
@@ -236,12 +260,17 @@ const Wishlist = () => {
                 }}
               >
                 {item.image_url && (
-                  <div className="aspect-video bg-gray-100 dark:bg-slate-800 overflow-hidden">
+                  <div className="aspect-video bg-gray-100 dark:bg-slate-800 overflow-hidden relative">
                     <img
                       src={item.image_url}
                       alt={item.title}
                       className="w-full h-full object-cover"
                     />
+                    {isFullyClaimed && !isUserClaim && (
+                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                        <Badge variant="secondary" className="text-sm">Unavailable</Badge>
+                      </div>
+                    )}
                   </div>
                 )}
                 <CardHeader>
@@ -291,6 +320,7 @@ const Wishlist = () => {
                               setClaimingItem(item);
                               setClaimDialogOpen(true);
                             }}
+                            disabled={isFullyClaimed && !isUserClaim}
                           >
                             <Gift className="w-4 h-4" />
                             Claim
@@ -314,7 +344,8 @@ const Wishlist = () => {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>
