@@ -1,5 +1,8 @@
 project_id = "rjmavtwxceztljclbtfj"
 
+[functions.fetch-product-metadata]
+verify_jwt = true
+
 [functions.send-invitation]
 verify_jwt = true
 
