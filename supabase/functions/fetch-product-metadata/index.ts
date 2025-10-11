@@ -167,19 +167,25 @@ async function fetchHtmlWithTimeout(url: string, timeoutMs = 8000): Promise<stri
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  console.log("X - handler", req.method);
   if (req.method === "OPTIONS") {
+    console.log("X - corsHeaders", corsHeaders);
+    console.log("X - returning 200");
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
+    console.log("X - parsing request body...");
     const { url }: RequestBody = await req.json();
+    console.log("X - url", url);
     if (!url || !isHttpUrl(url)) {
+      console.log("X - returning 400");
       return new Response(
         JSON.stringify({ success: false, error: "A valid http(s) URL is required" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
-
+    console.log("X - fetching html...");
     const html = await fetchHtmlWithTimeout(url);
 
     const meta: ProductMetadata = {};
