@@ -9,9 +9,11 @@ import { Loader2, Plus, ExternalLink, Gift, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import AddItemDialog from "@/components/AddItemDialog";
 import EditItemDialog from "@/components/EditItemDialog";
+import ClaimItemDialog from "@/components/ClaimItemDialog";
 
 interface Item {
   id: string;
+  wishlist_id: string;
   url: string;
   title: string;
   price: number;
@@ -35,6 +37,9 @@ const Wishlist = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [isOwner, setIsOwner] = useState(false);
+  const [claimDialogOpen, setClaimDialogOpen] = useState(false);
+  const [claimingItem, setClaimingItem] = useState<Item | null>(null);
+  const [groupId, setGroupId] = useState("");
 
   useEffect(() => {
     checkAuth();
@@ -57,6 +62,7 @@ const Wishlist = () => {
         .select(`
           name,
           user_id,
+          group_id,
           profiles (name)
         `)
         .eq("id", wishlistId)
@@ -66,6 +72,7 @@ const Wishlist = () => {
 
       setWishlistName(wishlist.name);
       setWishlistOwnerId(wishlist.user_id);
+      setGroupId(wishlist.group_id);
 
       const { data: { user } } = await supabase.auth.getUser();
       setIsOwner(user?.id === wishlist.user_id);
@@ -133,6 +140,34 @@ const Wishlist = () => {
         Claimed by {item.claims[0].profiles.name}
       </Badge>
     );
+  };
+
+  const handleUnclaim = async (claimId: string) => {
+    try {
+      const { error } = await supabase
+        .from("item_claims")
+        .delete()
+        .eq("id", claimId);
+
+      if (error) throw error;
+
+      toast.success("Item unclaimed successfully");
+      fetchWishlist();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to unclaim item");
+    }
+  };
+
+  const canClaimItem = (item: Item) => {
+    if (isOwner) return false;
+    if (!item.allow_multiple_claims && item.claims && item.claims.length > 0) {
+      return false;
+    }
+    return true;
+  };
+
+  const getUserClaim = (item: Item) => {
+    return item.claims?.find((c) => c.claimer_id === currentUserId);
   };
 
   if (loading) {
@@ -229,17 +264,54 @@ const Wishlist = () => {
                       <Badge variant="outline">Qty: {item.quantity}</Badge>
                     )}
                   </div>
-                  {item.url && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full gap-2"
-                      onClick={() => window.open(item.url, "_blank")}
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      View Item
-                    </Button>
-                  )}
+                  <div className="flex gap-2">
+                    {item.url && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 gap-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(item.url, "_blank");
+                        }}
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        View Item
+                      </Button>
+                    )}
+                    {!isOwner && (
+                      <>
+                        {canClaimItem(item) && (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            className={`gap-2 ${!item.url ? 'flex-1' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setClaimingItem(item);
+                              setClaimDialogOpen(true);
+                            }}
+                          >
+                            <Gift className="w-4 h-4" />
+                            Claim
+                          </Button>
+                        )}
+                        {getUserClaim(item) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className={`gap-2 ${!item.url ? 'flex-1' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUnclaim(getUserClaim(item).id);
+                            }}
+                          >
+                            Unclaim
+                          </Button>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -258,6 +330,14 @@ const Wishlist = () => {
         item={editingItem}
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
+        onSuccess={fetchWishlist}
+      />
+
+      <ClaimItemDialog
+        item={claimingItem}
+        groupId={groupId}
+        open={claimDialogOpen}
+        onOpenChange={setClaimDialogOpen}
         onSuccess={fetchWishlist}
       />
     </Layout>
