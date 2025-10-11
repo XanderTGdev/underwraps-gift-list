@@ -249,7 +249,7 @@ const Wishlist = () => {
                   isOwner ? 'cursor-pointer' : ''
                 } ${
                   isFullyClaimed && !isUserClaim 
-                    ? 'opacity-50 grayscale' 
+                    ? 'opacity-30 grayscale pointer-events-none' 
                     : 'hover:border-teal-500 hover:shadow-lg'
                 }`}
                 onClick={() => {
@@ -267,8 +267,8 @@ const Wishlist = () => {
                       className="w-full h-full object-cover"
                     />
                     {isFullyClaimed && !isUserClaim && (
-                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                        <Badge variant="secondary" className="text-sm">Unavailable</Badge>
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                        <Badge variant="secondary" className="text-lg font-semibold">Unavailable</Badge>
                       </div>
                     )}
                   </div>
