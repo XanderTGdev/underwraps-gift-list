@@ -143,10 +143,11 @@ function extractPriceFromMeta(html: string): { price?: number; currency?: string
 }
 
 async function fetchHtmlWithTimeout(url: string, timeoutMs = 8000): Promise<string> {
-  console.log("fetchHtmlWithTimeout", url);
+  console.log("FHWT - fetchHtmlWithTimeout", url);
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
   try {
+    console.log("FHWT - 'try' - fetching url");
     const resp = await fetch(url, {
       headers: {
         "User-Agent":
@@ -156,12 +157,15 @@ async function fetchHtmlWithTimeout(url: string, timeoutMs = 8000): Promise<stri
       signal: controller.signal,
       redirect: "follow",
     });
+    console.log("FHWT - 'try' - resp", resp);
     const contentType = resp.headers.get("content-type") || "";
     if (!contentType.includes("text/html")) {
+      console.log("FHWT - 'if (!contentType.includes('text/html'))' - throwing error");
       throw new Error("URL is not an HTML page");
     }
     return await resp.text();
   } finally {
+    console.log("FHWT - 'finally' - clearing timeout");
     clearTimeout(id);
   }
 }
@@ -182,7 +186,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
     console.log("X - fetching html...");
-    console.log("X - MARK-1")
+    console.log("X - MARK-1");
     const html = await fetchHtmlWithTimeout(url);
 
     const meta: ProductMetadata = {};
