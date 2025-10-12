@@ -167,15 +167,11 @@ async function fetchHtmlWithTimeout(url: string, timeoutMs = 8000): Promise<stri
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  console.log("X - handler", req.method);
   if (req.method === "OPTIONS") {
-    console.log("X - corsHeaders", corsHeaders);
-    console.log("X - returning 200");
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
-    console.log("X - parsing request body...");
     const { url }: RequestBody = await req.json();
     console.log("X - url", url);
     if (!url || !isHttpUrl(url)) {
@@ -186,6 +182,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
     console.log("X - fetching html...");
+    console.log("X - MARK-1")
     const html = await fetchHtmlWithTimeout(url);
 
     const meta: ProductMetadata = {};
