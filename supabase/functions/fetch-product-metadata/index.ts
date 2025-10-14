@@ -179,8 +179,37 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const { url }: RequestBody = await req.json();
     console.log("X - url", url);
-    if (!url || !isHttpUrl(url)) {
-      console.log("X - returning 400");
+    
+    // Validation: Check if URL exists
+    if (!url) {
+      console.log("X - missing URL");
+      return new Response(
+        JSON.stringify({ success: false, error: "URL is required" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+
+    // Validation: Check if URL is a string
+    if (typeof url !== "string") {
+      console.log("X - URL not a string");
+      return new Response(
+        JSON.stringify({ success: false, error: "URL must be a string" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+
+    // Validation: Check URL length
+    if (url.trim().length > 2048) {
+      console.log("X - URL too long");
+      return new Response(
+        JSON.stringify({ success: false, error: "URL must be less than 2048 characters" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+
+    // Validation: Check if URL is valid HTTP(S)
+    if (!isHttpUrl(url.trim())) {
+      console.log("X - invalid HTTP URL");
       return new Response(
         JSON.stringify({ success: false, error: "A valid http(s) URL is required" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },

@@ -9,15 +9,15 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
+// Basic client-side validation for UX - database constraints provide final validation
 const itemSchema = z.object({
   title: z.string()
     .trim()
-    .min(1, { message: "Title is required" })
-    .max(200, { message: "Title must be less than 200 characters" }),
+    .min(1, { message: "Title is required" }),
   url: z.string().url({ message: "Invalid URL" }).optional().or(z.literal('')),
   price: z.number().positive({ message: "Price must be positive" }).optional(),
   imageUrl: z.string().url({ message: "Invalid image URL" }).optional().or(z.literal('')),
-  note: z.string().max(1000, { message: "Note must be less than 1000 characters" }).optional()
+  note: z.string().optional()
 });
 interface AddItemDialogProps {
   wishlistId: string;
