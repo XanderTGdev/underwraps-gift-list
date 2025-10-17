@@ -1,7 +1,20 @@
-// /api/csp-report.ts (Vercel Serverless Function, Node)
+// /api/csp-report.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
+async function readRawBody(req: VercelRequest): Promise<string> {
+  if (typeof req.body === 'string') return req.body;
+  if (req.body && typeof req.body === 'object') return JSON.stringify(req.body);
+  return await new Promise<string>((resolve, reject) => {
+    let data = '';
+    req.setEncoding('utf8');
+    req.on('data', (chunk) => (data += chunk));
+    req.on('end', () => resolve(data));
+    req.on('error', reject);
+  });
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // CORS / preflight
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -9,45 +22,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(204).end();
   }
 
-  if (req.method !== 'POST') {
-    return res.status(405).end();
-  }
+  if (req.method !== 'POST') return res.status(405).end();
 
   const ct = (req.headers['content-type'] || '').toString().toLowerCase();
+  const ip =
+    (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ??
+    req.headers['cf-connecting-ip'] ??
+    req.socket.remoteAddress ??
+    'unknown';
+  const ua = req.headers['user-agent'] ?? '';
 
   try {
-    const ip =
-      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ??
-      req.headers['cf-connecting-ip'] ??
-      req.socket.remoteAddress ??
-      'unknown';
-
-    const ua = req.headers['user-agent'] ?? '';
+    const raw = await readRawBody(req);
     const reports: any[] = [];
 
     if (ct.includes('application/reports+json')) {
       // New Reporting API: array of report objects
-      const body = req.body; // Vercel parses JSON by default
-      if (Array.isArray(body)) {
-        for (const r of body) {
-          const blocked = r?.body?.['blocked-uri'] as string | undefined;
+      let arr: unknown = [];
+      try {
+        arr = raw ? JSON.parse(raw) : [];
+      } catch {
+        // Sometimes proxies send newline-delimited JSON; try a best-effort split
+        arr = raw
+          .split('\n')
+          .map((l) => l.trim())
+          .filter(Boolean)
+          .map((l) => JSON.parse(l));
+      }
+      if (Array.isArray(arr)) {
+        for (const r of arr) {
+          const blocked = (r as any)?.body?.['blocked-uri'] as string | undefined;
           if (blocked?.startsWith('chrome-extension://') || blocked?.startsWith('moz-extension://')) continue;
           reports.push({ received_at: new Date().toISOString(), ip, ua, ...r });
         }
       }
     } else {
-      // Legacy format or generic JSON
-      const raw = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-      const legacy = raw?.['csp-report'] ?? raw;
+      // Legacy CSP (application/csp-report) or generic JSON
+      const obj = raw ? JSON.parse(raw) : {};
+      const legacy = (obj as any)['csp-report'] ?? obj;
       const blocked = legacy?.['blocked-uri'] as string | undefined;
       if (!blocked?.startsWith?.('chrome-extension://') && !blocked?.startsWith?.('moz-extension://')) {
         reports.push({ received_at: new Date().toISOString(), ip, ua, ...legacy });
       }
     }
 
-    // >>> This is the extra logging you asked for <<<
     if (reports.length === 0) {
-      console.log('CSP report: none parsed', { ct, ip, ua });
+      console.log('CSP report: none parsed', { ct, ip, ua, rawLen: raw?.length ?? 0 });
     } else {
       for (const r of reports) {
         const body = (r as any).body ?? r;
@@ -64,7 +84,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   } catch (e) {
     console.error('CSP handler error', e);
-    // still return 204 so browsers don't retry
   }
 
   return res.status(204).end();
