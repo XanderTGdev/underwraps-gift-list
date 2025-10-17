@@ -66,22 +66,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    // after you push into `reports`
     if (reports.length === 0) {
-      console.log('CSP report: none parsed', { ct, ip, ua, rawLen: raw?.length ?? 0 });
+      console.log('CSP report: none parsed', { ct, ip, ua, rawLen: (await readRawBody(req))?.length ?? 0 });
     } else {
       for (const r of reports) {
-        const body = (r as any).body ?? r;
-        console.log(
-          'CSP report:',
-          JSON.stringify({
-            blocked: body['blocked-uri'],
-            directive: body['violated-directive'],
-            doc: body['document-uri'],
-            sample: body['sample'] ?? body['script-sample'],
-          })
-        );
+        const body: any = (r as any).body ?? r;
+        const blocked =
+          body['blocked-uri'] ??
+          body['blocked-url'] ??          // newer key seen in some Chrome reports
+          body['url'] ??                  // sometimes present
+          body['destination'];            // e.g., fetch/img/script destination
+
+        const directive =
+          body['effective-directive'] ??  // newer canonical field
+          body['violated-directive'];
+
+        const doc =
+          body['document-uri'] ??
+          (r as any).url ?? '';
+
+        const sample = body['sample'] ?? body['script-sample'] ?? '';
+
+        if (!blocked && !directive) {
+          // dump the whole body once so you can see the shape you’re getting
+          console.log('CSP report (raw body):', JSON.stringify(body));
+        } else {
+          console.log('CSP report:', JSON.stringify({ blocked, directive, doc, sample }));
+        }
       }
     }
+
   } catch (e) {
     console.error('CSP handler error', e);
   }
