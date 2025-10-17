@@ -5,15 +5,15 @@
       "headers": [
         {
           "key": "Content-Security-Policy-Report-Only",
-          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://*.supabase.in https://*.functions.supabase.co wss://*.supabase.co wss://*.supabase.in https://vitals.vercel-insights.com; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; report-to csp-endpoint; report-uri https://ncbakudazfwatieawjby.functions.supabase.co/csp-report; report-sample"
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://*.supabase.in https://*.functions.supabase.co wss://*.supabase.co wss://*.supabase.in https://vitals.vercel-insights.com; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; report-to csp-endpoint; report-uri https://rjmavtwxceztljclbtfj.functions.supabase.co/csp-report; report-sample"
         },
         {
           "key": "Report-To",
-          "value": "{\"group\":\"csp-endpoint\",\"max_age\":10886400,\"endpoints\":[{\"url\":\"https://ncbakudazfwatieawjby.functions.supabase.co/csp-report\"}]}"
+          "value": "{\"group\":\"csp-endpoint\",\"max_age\":10886400,\"endpoints\":[{\"url\":\"https://rjmavtwxceztljclbtfj.functions.supabase.co/csp-report\"}]}"
         },
         {
           "key": "Reporting-Endpoints",
-          "value": "csp-endpoint=\"https://ncbakudazfwatieawjby.functions.supabase.co/csp-report\""
+          "value": "csp-endpoint=\"https://rjmavtwxceztljclbtfj.functions.supabase.co/csp-report\""
         },
         {
           "key": "X-Frame-Options",
