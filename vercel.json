@@ -5,6 +5,12 @@
       "runtime": "nodejs20.x"
     }
   },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
