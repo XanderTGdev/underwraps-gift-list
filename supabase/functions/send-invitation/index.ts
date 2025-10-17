@@ -67,17 +67,38 @@ const handler = async (req: Request): Promise<Response> => {
     // 2. Parse and validate request body
     const { groupId, inviteeEmail }: InvitationRequest = await req.json();
 
-    if (!groupId || !inviteeEmail) {
-      throw new Error("Missing required fields: groupId and inviteeEmail");
+    // Validate required fields
+    if (!groupId) {
+      throw new Error("Group ID is required");
+    }
+    if (!inviteeEmail) {
+      throw new Error("Email address is required");
+    }
+
+    // Validate types
+    if (typeof groupId !== "string" || typeof inviteeEmail !== "string") {
+      throw new Error("Invalid field types");
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(inviteeEmail)) {
+    const trimmedEmail = inviteeEmail.trim();
+    if (!emailRegex.test(trimmedEmail)) {
       throw new Error("Invalid email address");
     }
 
-    console.log(`Processing invitation for ${inviteeEmail} to group ${groupId}`);
+    // Validate email length
+    if (trimmedEmail.length > 255) {
+      throw new Error("Email address must be less than 255 characters");
+    }
+
+    // Validate groupId format (should be UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(groupId)) {
+      throw new Error("Invalid group ID format");
+    }
+
+    console.log(`Processing invitation for ${trimmedEmail} to group ${groupId}`);
 
     // 3. Verify user is a member of the group
     const { data: membership, error: membershipError } = await supabaseClient
@@ -118,7 +139,7 @@ const handler = async (req: Request): Promise<Response> => {
       .from("invitations")
       .insert({
         group_id: groupId,
-        invitee_email: inviteeEmail,
+        invitee_email: trimmedEmail,
         inviter_id: user.id,
         token: token,
         status: "pending",
@@ -148,7 +169,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: fromEmail,
-      to: [inviteeEmail],
+      to: [trimmedEmail],
       subject: `You've been invited to join ${group.name}!`,
       html: `
         <!DOCTYPE html>

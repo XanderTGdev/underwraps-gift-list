@@ -8,11 +8,12 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
+// Basic client-side validation for UX - server validates thoroughly
 const inviteSchema = z.object({
   email: z.string()
     .trim()
+    .min(1, { message: "Email is required" })
     .email({ message: "Invalid email address" })
-    .max(255, { message: "Email must be less than 255 characters" })
 });
 
 interface InviteMemberDialogProps {
