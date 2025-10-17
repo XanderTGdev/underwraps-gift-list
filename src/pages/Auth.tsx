@@ -29,15 +29,19 @@ const signupSchema = z.object({
 const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const redirectUrl = searchParams.get("redirect") || "/groups";
-  const inviteGroup = searchParams.get("inviteGroup");
+  const redirect = searchParams.get("redirect") || "/groups";
+  // Sanitize the redirect URL
+  const redirectUrl = (redirect.startsWith("/") && !redirect.startsWith("//")) ? redirect : "/groups";
+  const inviteGroupRaw = searchParams.get("inviteGroup");
+  // Sanitize inviteGroup
+  const inviteGroup = inviteGroupRaw ? inviteGroupRaw.slice(0, 100).replace(/[<>]/g, '') : null;
   const [loading, setLoading] = useState(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupName, setSignupName] = useState("");
-  
+
   // Password strength calculation
   const calculatePasswordStrength = (password: string): { score: number; label: string; color: string } => {
     let score = 0;
@@ -47,13 +51,13 @@ const Auth = () => {
     if (/[A-Z]/.test(password)) score += 15;
     if (/[0-9]/.test(password)) score += 15;
     if (/[^a-zA-Z0-9]/.test(password)) score += 15;
-    
+
     if (score < 40) return { score, label: "Weak", color: "bg-red-500" };
     if (score < 70) return { score, label: "Fair", color: "bg-yellow-500" };
     if (score < 90) return { score, label: "Good", color: "bg-blue-500" };
     return { score, label: "Strong", color: "bg-green-500" };
   };
-  
+
   const passwordStrength = calculatePasswordStrength(signupPassword);
 
   // Check if already authenticated and redirect
@@ -69,18 +73,18 @@ const Auth = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate with Zod
     const validation = loginSchema.safeParse({
       email: loginEmail.trim(),
       password: loginPassword
     });
-    
+
     if (!validation.success) {
-      toast.error(validation.error.errors[0].message);
+      toast.error(validation.error.issues[0]?.message ?? "Invalid input");
       return;
     }
-    
+
     setLoading(true);
 
     try {
@@ -93,27 +97,28 @@ const Auth = () => {
       toast.success("Welcome back!");
       navigate(redirectUrl);
     } catch (error: any) {
-      toast.error(error.message || "Failed to sign in");
+      toast.error("Failed to sign in");
     } finally {
+      setLoginPassword("");
       setLoading(false);
     }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate with Zod
     const validation = signupSchema.safeParse({
       name: signupName.trim(),
       email: signupEmail.trim(),
       password: signupPassword
     });
-    
+
     if (!validation.success) {
-      toast.error(validation.error.errors[0].message);
+      toast.error(validation.error.issues[0]?.message ?? "Invalid input");
       return;
     }
-    
+
     setLoading(true);
 
     try {
@@ -130,14 +135,15 @@ const Auth = () => {
 
       if (error) throw error;
       toast.success("Account created! Please check your email.");
-      
+
       // Wait a moment for the session to be fully established
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       navigate(redirectUrl);
     } catch (error: any) {
-      toast.error(error.message || "Failed to sign up");
+      toast.error("Failed to sign up");
     } finally {
+      setSignupPassword("");
       setLoading(false);
     }
   };
@@ -153,8 +159,8 @@ const Auth = () => {
             {inviteGroup ? "You're Invited!" : "Under Wraps"}
           </h1>
           <p className="text-gray-600 dark:text-slate-400 mt-2">
-            {inviteGroup 
-              ? `Sign in or create an account to join ${inviteGroup}` 
+            {inviteGroup
+              ? `Sign in or create an account to join ${inviteGroup}`
               : "Secret gift planning made simple"}
           </p>
         </div>
@@ -256,12 +262,11 @@ const Auth = () => {
                       <div className="space-y-1">
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-gray-600 dark:text-slate-400">Password strength:</span>
-                          <span className={`font-medium ${
-                            passwordStrength.score < 40 ? 'text-red-600' :
+                          <span className={`font-medium ${passwordStrength.score < 40 ? 'text-red-600' :
                             passwordStrength.score < 70 ? 'text-yellow-600' :
-                            passwordStrength.score < 90 ? 'text-blue-600' :
-                            'text-green-600'
-                          }`}>
+                              passwordStrength.score < 90 ? 'text-blue-600' :
+                                'text-green-600'
+                            }`}>
                             {passwordStrength.label}
                           </span>
                         </div>
