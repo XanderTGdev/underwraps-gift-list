@@ -17,7 +17,7 @@ const Index = () => {
       navigate("/groups");
     }
   };
-
+  // dbg
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-slate-950">
       <div className="container mx-auto px-4 py-16">
