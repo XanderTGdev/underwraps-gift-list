@@ -88,40 +88,16 @@ export const AdminUserTable = () => {
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     try {
-      const user = users.find((u) => u.id === userId);
-      const globalRole = user?.roles.find((r) => r.group_id === null);
+      // Business logic moved to edge function for security
+      const { data, error } = await supabase.functions.invoke("update-user-role", {
+        body: { 
+          userId, 
+          groupId: null, // null for global roles
+          role: newRole === "none" ? null : newRole 
+        },
+      });
 
-      if (newRole === "none") {
-        // Remove global admin role
-        if (globalRole) {
-          const { error } = await supabase
-            .from("user_roles")
-            .delete()
-            .eq("user_id", userId)
-            .is("group_id", null);
-
-          if (error) throw error;
-        }
-      } else {
-        // Add or update global admin role
-        const role = newRole as Database["public"]["Enums"]["app_role"];
-        
-        if (globalRole) {
-          const { error } = await supabase
-            .from("user_roles")
-            .update({ role })
-            .eq("user_id", userId)
-            .is("group_id", null);
-
-          if (error) throw error;
-        } else {
-          const { error } = await supabase
-            .from("user_roles")
-            .insert({ user_id: userId, role, group_id: null });
-
-          if (error) throw error;
-        }
-      }
+      if (error) throw error;
 
       toast({
         title: "Success",
@@ -129,11 +105,11 @@ export const AdminUserTable = () => {
       });
 
       fetchUsers();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating role:", error);
       toast({
         title: "Error",
-        description: "Failed to update user role.",
+        description: error.message || "Failed to update user role.",
         variant: "destructive",
       });
     }
@@ -141,10 +117,10 @@ export const AdminUserTable = () => {
 
   const handleDeleteUser = async (userId: string) => {
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .delete()
-        .eq("id", userId);
+      // Business logic moved to edge function for security
+      const { data, error } = await supabase.functions.invoke("delete-user", {
+        body: { userId },
+      });
 
       if (error) throw error;
 
@@ -154,11 +130,11 @@ export const AdminUserTable = () => {
       });
 
       fetchUsers();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting user:", error);
       toast({
         title: "Error",
-        description: "Failed to delete user.",
+        description: error.message || "Failed to delete user.",
         variant: "destructive",
       });
     }

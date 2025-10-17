@@ -178,46 +178,72 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const { url }: RequestBody = await req.json();
-    console.log("X - url", url);
+    console.log("Processing metadata request for URL:", url);
     
-    // Validation: Check if URL exists
+    // 1. Validation: Check if URL exists
     if (!url) {
-      console.log("X - missing URL");
+      console.log("Missing URL in request");
       return new Response(
         JSON.stringify({ success: false, error: "URL is required" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 
-    // Validation: Check if URL is a string
+    // 2. Validation: Check if URL is a string
     if (typeof url !== "string") {
-      console.log("X - URL not a string");
+      console.log("URL is not a string");
       return new Response(
         JSON.stringify({ success: false, error: "URL must be a string" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 
-    // Validation: Check URL length
-    if (url.trim().length > 2048) {
-      console.log("X - URL too long");
+    // 3. Sanitization: Trim whitespace
+    const trimmedUrl = url.trim();
+
+    // 4. Validation: Check URL length (prevent DoS)
+    if (trimmedUrl.length > 2048) {
+      console.log("URL exceeds maximum length");
       return new Response(
         JSON.stringify({ success: false, error: "URL must be less than 2048 characters" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 
-    // Validation: Check if URL is valid HTTP(S)
-    if (!isHttpUrl(url.trim())) {
-      console.log("X - invalid HTTP URL");
+    // 5. Validation: Check if URL is valid HTTP(S)
+    if (!isHttpUrl(trimmedUrl)) {
+      console.log("Invalid HTTP(S) URL");
       return new Response(
         JSON.stringify({ success: false, error: "A valid http(s) URL is required" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
-    console.log("X - fetching html...");
-    console.log("X - MARK-1");
-    const html = await fetchHtmlWithTimeout(url);
+
+    // 6. Security: Prevent SSRF by blocking private IP ranges
+    const urlObj = new URL(trimmedUrl);
+    const hostname = urlObj.hostname.toLowerCase();
+    
+    // Block localhost and private networks
+    const blockedPatterns = [
+      /^localhost$/i,
+      /^127\./,
+      /^10\./,
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
+      /^192\.168\./,
+      /^::1$/,
+      /^fe80:/i,
+    ];
+
+    if (blockedPatterns.some(pattern => pattern.test(hostname))) {
+      console.log("Blocked attempt to access private network:", hostname);
+      return new Response(
+        JSON.stringify({ success: false, error: "Cannot access private network URLs" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+    // 7. Business Logic: Fetch HTML with timeout protection
+    console.log("Fetching HTML for URL:", trimmedUrl);
+    const html = await fetchHtmlWithTimeout(trimmedUrl);
 
     const meta: ProductMetadata = {};
 
@@ -242,8 +268,20 @@ const handler = async (req: Request): Promise<Response> => {
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
     );
   } catch (error: any) {
-    console.error("Error in fetch-product-metadata:", error?.message || error);
-    const message = error?.name === "AbortError" ? "Timed out fetching URL" : "Unable to fetch metadata";
+    // Log detailed error server-side for debugging
+    console.error("Error in fetch-product-metadata function:", {
+      message: error?.message || error,
+      name: error?.name,
+      stack: error?.stack,
+    });
+    
+    // Map to user-friendly error messages (don't expose internal details)
+    const message = error?.name === "AbortError" 
+      ? "Request timed out while fetching URL" 
+      : error?.message === "URL is not an HTML page"
+      ? "The URL does not point to a valid web page"
+      : "Unable to fetch product information";
+    
     return new Response(
       JSON.stringify({ success: false, error: message }),
       { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },

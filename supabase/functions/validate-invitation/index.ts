@@ -21,11 +21,47 @@ const handler = async (req: Request): Promise<Response> => {
     // Parse request body
     const { token }: ValidationRequest = await req.json();
 
+    // Validate required fields
     if (!token) {
       return new Response(
         JSON.stringify({
           success: false,
           error: "Invitation token is required",
+        }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        }
+      );
+    }
+
+    // Validate token is a string
+    if (typeof token !== "string") {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Invalid token format",
+        }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        }
+      );
+    }
+
+    // Validate token length and format (UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(token.trim())) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Invalid invitation token",
         }),
         {
           status: 400,
@@ -52,11 +88,12 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
     // Query invitation with service role (bypasses RLS)
+    // Use maybeSingle() to avoid errors when no match is found
     const { data: invitation, error: invitationError } = await supabaseAdmin
       .from("invitations")
       .select("id, group_id, invitee_email, status, expires_at, groups(name)")
-      .eq("token", token)
-      .single();
+      .eq("token", token.trim())
+      .maybeSingle();
 
     if (invitationError || !invitation) {
       console.log("Invitation not found or error:", invitationError);
