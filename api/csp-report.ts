@@ -1,7 +1,4 @@
 // /api/csp-report.ts (Vercel Serverless Function, Node)
-// Accepts both legacy (application/csp-report) and modern (application/reports+json) reports.
-// Always 204. Logs to Vercel function logs.
-
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -17,6 +14,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const ct = (req.headers['content-type'] || '').toString().toLowerCase();
+
   try {
     const ip =
       (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ??
@@ -24,29 +22,50 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       req.socket.remoteAddress ??
       'unknown';
 
-    let reports: any[] = [];
+    const ua = req.headers['user-agent'] ?? '';
+    const reports: any[] = [];
+
     if (ct.includes('application/reports+json')) {
-      const body = req.body; // should be an array
+      // New Reporting API: array of report objects
+      const body = req.body; // Vercel parses JSON by default
       if (Array.isArray(body)) {
         for (const r of body) {
-          const blocked = r?.body?.['blocked-uri'];
-          if (typeof blocked === 'string' && (blocked.startsWith('chrome-extension://') || blocked.startsWith('moz-extension://'))) continue;
-          reports.push({ received_at: new Date().toISOString(), ip, ua: req.headers['user-agent'], ...r });
+          const blocked = r?.body?.['blocked-uri'] as string | undefined;
+          if (blocked?.startsWith('chrome-extension://') || blocked?.startsWith('moz-extension://')) continue;
+          reports.push({ received_at: new Date().toISOString(), ip, ua, ...r });
         }
       }
     } else {
-      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-      const legacy = body?.['csp-report'] ?? body;
-      const blocked = legacy?.['blocked-uri'];
-      if (typeof blocked !== 'string' || (!blocked.startsWith('chrome-extension://') && !blocked.startsWith('moz-extension://'))) {
-        reports.push({ received_at: new Date().toISOString(), ip, ua: req.headers['user-agent'], ...legacy });
+      // Legacy format or generic JSON
+      const raw = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+      const legacy = raw?.['csp-report'] ?? raw;
+      const blocked = legacy?.['blocked-uri'] as string | undefined;
+      if (!blocked?.startsWith?.('chrome-extension://') && !blocked?.startsWith?.('moz-extension://')) {
+        reports.push({ received_at: new Date().toISOString(), ip, ua, ...legacy });
       }
     }
 
-    for (const r of reports) console.log('CSP report:', JSON.stringify(r));
+    // >>> This is the extra logging you asked for <<<
+    if (reports.length === 0) {
+      console.log('CSP report: none parsed', { ct, ip, ua });
+    } else {
+      for (const r of reports) {
+        const body = (r as any).body ?? r;
+        console.log(
+          'CSP report:',
+          JSON.stringify({
+            blocked: body['blocked-uri'],
+            directive: body['violated-directive'],
+            doc: body['document-uri'],
+            sample: body['sample'] ?? body['script-sample'],
+          })
+        );
+      }
+    }
   } catch (e) {
     console.error('CSP handler error', e);
-    // swallow errors; still return 204
+    // still return 204 so browsers don't retry
   }
+
   return res.status(204).end();
 }
