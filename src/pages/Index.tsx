@@ -25,11 +25,11 @@ const Index = () => {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-teal-600 mb-6 shadow-lg dark:bg-teal-500">
             <Gift className="w-10 h-10 text-white" />
           </div>
-          
+
           <h1 className="text-5xl md:text-6xl font-bold mb-6 text-teal-700 dark:text-teal-300">
             Under Wraps
           </h1>
-          
+
           <p className="text-xl text-gray-600 dark:text-slate-400 mb-12 max-w-2xl mx-auto">
             The secret to perfect gift-giving. Create wishlists, form groups, and claim gifts without spoiling the surprise.
           </p>
@@ -69,16 +69,6 @@ const Index = () => {
               <h3 className="text-lg font-semibold mb-2 text-slate-900 dark:text-slate-100">Secret Claims</h3>
               <p className="text-gray-600 dark:text-slate-400">
                 Claim gifts on others' lists with reveal dates to keep surprises intact
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-white border border-gray-200 shadow-sm dark:bg-slate-900 dark:border-slate-700">
-              <div className="w-12 h-12 rounded-lg bg-teal-600 flex items-center justify-center mb-4 mx-auto dark:bg-teal-500">
-                <Sparkles className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2 text-slate-900 dark:text-slate-100">Auto-Fetch Items</h3>
-              <p className="text-gray-600 dark:text-slate-400">
-                Paste any product URL and we'll automatically fetch details
               </p>
             </div>
           </div>
