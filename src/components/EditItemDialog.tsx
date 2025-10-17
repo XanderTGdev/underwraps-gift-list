@@ -56,17 +56,17 @@ const EditItemDialog = ({
 
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from("items")
-        .update({
-          url: url || null,
+      const { error } = await supabase.functions.invoke('edit-item', {
+        body: {
+          itemId: item.id,
           title: title.trim(),
-          price: price ? parseFloat(price) : null,
-          currency: currency || "USD",
-          image_url: imageUrl || null,
-          note: note || null,
-        })
-        .eq("id", item.id);
+          url: url || undefined,
+          price: price ? parseFloat(price) : undefined,
+          imageUrl: imageUrl || undefined,
+          note: note || undefined,
+          currency,
+        },
+      });
 
       if (error) throw error;
 

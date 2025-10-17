@@ -77,25 +77,11 @@ const Groups = () => {
 
     setCreating(true);
     try {
-      const { data: group, error: groupError } = await supabase
-        .from("groups")
-        .insert({
-          name: newGroupName,
-          owner_id: userId,
-        })
-        .select()
-        .single();
+      const { data, error } = await supabase.functions.invoke('create-group', {
+        body: { name: newGroupName },
+      });
 
-      if (groupError) throw groupError;
-
-      const { error: memberError } = await supabase
-        .from("group_members")
-        .insert({
-          group_id: group.id,
-          user_id: userId,
-        });
-
-      if (memberError) throw memberError;
+      if (error) throw error;
 
       toast.success("Group created!");
       setCreateDialogOpen(false);

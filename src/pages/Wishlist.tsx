@@ -154,10 +154,9 @@ const Wishlist = () => {
 
   const handleUnclaim = async (claimId: string) => {
     try {
-      const { error } = await supabase
-        .from("item_claims")
-        .delete()
-        .eq("id", claimId);
+      const { error } = await supabase.functions.invoke('unclaim-item', {
+        body: { claimId },
+      });
 
       if (error) throw error;
 

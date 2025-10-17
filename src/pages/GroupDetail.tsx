@@ -139,21 +139,17 @@ const GroupDetail = () => {
     if (!currentUserId) return;
 
     try {
-      const { data, error } = await supabase
-        .from("wishlists")
-        .insert({
-          user_id: currentUserId,
-          group_id: groupId,
+      const { data, error } = await supabase.functions.invoke('create-wishlist', {
+        body: {
+          groupId,
           name: "My Wishlist",
-          is_default: true,
-        })
-        .select()
-        .single();
+        },
+      });
 
       if (error) throw error;
 
       toast.success("Wishlist created!");
-      navigate(`/wishlists/${data.id}`);
+      navigate(`/wishlists/${data.wishlist.id}`);
     } catch (error: any) {
       toast.error(error.message || "Failed to create wishlist");
     }

@@ -36,18 +36,14 @@ const ClaimItemDialog = ({ item, groupId, open, onOpenChange, onSuccess }: Claim
 
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      const { error } = await supabase
-        .from("item_claims")
-        .insert({
-          item_id: item.id,
-          claimer_id: user.id,
-          group_id: groupId,
-          reveal_date: format(revealDate, "yyyy-MM-dd"),
-          note: note || null,
-        });
+      const { error } = await supabase.functions.invoke('claim-item', {
+        body: {
+          itemId: item.id,
+          groupId,
+          revealDate: format(revealDate, "yyyy-MM-dd"),
+          note: note || undefined,
+        },
+      });
 
       if (error) throw error;
 

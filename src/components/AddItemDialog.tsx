@@ -125,20 +125,20 @@ const AddItemDialog = ({
 
     setLoading(true);
     try {
-      const {
-        error
-      } = await supabase.from("items").insert({
-        wishlist_id: wishlistId,
-        url: validation.data.url || null,
-        title: validation.data.title,
-        price: validation.data.price || null,
-        currency: currency || "USD",
-        image_url: validation.data.imageUrl || null,
-        note: validation.data.note || null,
-        quantity: 1,
-        allow_multiple_claims: false
+      const { error } = await supabase.functions.invoke('add-item', {
+        body: {
+          wishlistId,
+          title: validation.data.title,
+          url: validation.data.url,
+          price: validation.data.price,
+          imageUrl: validation.data.imageUrl,
+          note: validation.data.note,
+          currency: currency || "USD",
+        },
       });
+
       if (error) throw error;
+
       toast.success("Item added to wishlist!");
       setTitle("");
       setUrl("");

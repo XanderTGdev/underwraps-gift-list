@@ -116,63 +116,19 @@ export default function AcceptInvite() {
         return;
       }
 
-      // Debug: Check invitation and user details before inserting
-      console.log("DEBUG: About to insert group member", {
-        group_id: invitation.group_id,
-        user_id: user.id,
-        user_email: user.email,
-        invitation_email: invitation.invitee_email,
-        invitation_status: invitation.status,
-        invitation_expires_at: invitation.expires_at
+      // Use edge function for acceptance
+      const { data, error } = await supabase.functions.invoke('accept-invitation', {
+        body: { invitationId: invitation.id },
       });
 
-      // Add user to group
-      const { error: memberError } = await supabase
-        .from("group_members")
-        .insert({
-          group_id: invitation.group_id,
-          user_id: user.id,
-        });
+      if (error) throw error;
 
-      if (memberError) {
-        console.error("Group member insert error details:", {
-          code: memberError.code,
-          message: memberError.message,
-          details: memberError.details,
-          hint: memberError.hint,
-          user_id: user.id,
-          user_email: user.email,
-          group_id: invitation.group_id,
-          invitation_email: invitation.invitee_email
-        });
-        
-        if (memberError.code === '23505') { // Unique constraint violation
-          toast.error("You are already a member of this group");
-          // Still update invitation status to accepted
-        } else {
-          toast.error(`Failed to join group: ${memberError.message}`);
-          throw memberError;
-        }
+      if (data?.alreadyMember) {
+        toast.info("You are already a member of this group");
+      } else {
+        toast.success(`You've joined ${groupName}!`);
       }
-
-      // Update invitation status
-      const { error: updateError } = await supabase
-        .from("invitations")
-        .update({ status: 'accepted' })
-        .eq("id", invitation.id);
-
-      if (updateError) {
-        console.error("Update invitation error details:", {
-          code: updateError.code,
-          message: updateError.message,
-          details: updateError.details,
-          hint: updateError.hint
-        });
-        toast.error(`Failed to update invitation: ${updateError.message}`);
-        throw updateError;
-      }
-
-      toast.success(`You've joined ${groupName}!`);
+      
       setStatus('accepted');
       
       // Redirect to the group after a short delay
@@ -182,7 +138,7 @@ export default function AcceptInvite() {
 
     } catch (error: any) {
       console.error("Error accepting invitation:", error);
-      toast.error("Failed to accept invitation. Please try again.");
+      toast.error(error.message || "Failed to accept invitation. Please try again.");
       setStatus('error');
     }
   };
