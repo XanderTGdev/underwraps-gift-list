@@ -5,7 +5,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy-Report-Only",
-          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://*.supabase.in https://*.functions.supabase.co wss://*.supabase.co wss://*.supabase.in https://vitals.vercel-insights.com; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; report-to csp-endpoint; report-sample"
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://*.supabase.in https://*.functions.supabase.co wss://*.supabase.co wss://*.supabase.in https://vitals.vercel-insights.com; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; report-to csp-endpoint; report-uri https://ncbakudazfwatieawjby.functions.supabase.co/csp-report; report-sample"
         },
         {
           "key": "Report-To",
