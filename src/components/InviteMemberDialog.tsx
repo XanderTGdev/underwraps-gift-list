@@ -29,14 +29,14 @@ const InviteMemberDialog = ({ groupId, open, onOpenChange, onSuccess }: InviteMe
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate email with Zod
     const validation = inviteSchema.safeParse({ email: email.trim() });
     if (!validation.success) {
-      toast.error(validation.error.errors[0].message);
+      toast.error(validation.error.issues[0]?.message ?? "Invalid input");
       return;
     }
-    
+
     setLoading(true);
 
     try {
