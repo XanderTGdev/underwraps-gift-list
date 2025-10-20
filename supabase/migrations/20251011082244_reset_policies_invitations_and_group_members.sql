@@ -77,4 +77,39 @@ WITH CHECK (
 
 -- Optional: keep existing SELECT/DELETE policies intact; we only care about INSERT here
 
+-- Migration: Ensure all group members have corresponding user_roles entries
+INSERT INTO public.user_roles (user_id, group_id, role)
+SELECT
+  gm.user_id,
+  gm.group_id,
+  CASE
+    WHEN gm.role = 'owner' THEN 'owner'::public.app_role
+    WHEN gm.role = 'admin' THEN 'admin'::public.app_role
+    ELSE 'member'::public.app_role
+  END as role
+FROM public.group_members gm
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.user_roles ur
+  WHERE ur.user_id = gm.user_id AND ur.group_id = gm.group_id
+)
+ON CONFLICT (user_id, group_id) DO NOTHING;
+
+-- Create a safe upsert function for user roles
+CREATE OR REPLACE FUNCTION public.upsert_user_role_safe(
+  p_user_id uuid,
+  p_group_id uuid,
+  p_role public.app_role DEFAULT 'member'
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.user_roles (user_id, group_id, role)
+  VALUES (p_user_id, p_group_id, p_role)
+  ON CONFLICT (user_id, group_id) DO NOTHING;
+END;
+$$;
+
 

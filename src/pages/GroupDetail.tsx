@@ -69,7 +69,7 @@ const GroupDetail = () => {
           .eq("group_id", groupId)
           .eq("user_id", currentUserId)
           .single();
-        
+
         setIsAdmin(userRole?.role === 'owner' || userRole?.role === 'admin');
       }
 
@@ -204,8 +204,8 @@ const GroupDetail = () => {
                       <p className="font-medium text-slate-900 dark:text-slate-100">{member.name}</p>
                       <p className="text-sm text-gray-600 dark:text-slate-400">
                         {/* Show full email only if viewing own profile or if viewer is admin */}
-                        {member.id === currentUserId || isAdmin 
-                          ? member.email 
+                        {member.id === currentUserId || isAdmin
+                          ? member.email
                           : <span className="italic">Email hidden</span>}
                       </p>
                     </div>
@@ -231,7 +231,7 @@ const GroupDetail = () => {
                   className="gap-2"
                 >
                   <Plus className="w-4 h-4" />
-                  Create
+                  Create Wishlist
                 </Button>
               </div>
             </CardHeader>

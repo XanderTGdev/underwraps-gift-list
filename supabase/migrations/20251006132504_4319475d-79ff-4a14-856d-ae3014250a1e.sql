@@ -11,7 +11,12 @@ BEGIN
   INSERT INTO public.group_members (user_id, group_id, role)
   VALUES (NEW.owner_id, NEW.id, 'owner')
   ON CONFLICT (group_id, user_id) DO NOTHING;
-  
+
+  -- Also add to user_roles table
+  INSERT INTO public.user_roles (user_id, group_id, role)
+  VALUES (NEW.owner_id, NEW.id, 'owner')
+  ON CONFLICT (user_id, group_id) DO NOTHING;
+
   RETURN NEW;
 END;
 $$;

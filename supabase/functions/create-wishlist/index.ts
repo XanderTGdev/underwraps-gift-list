@@ -20,7 +20,7 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const authHeader = req.headers.get('Authorization')!;
-    
+
     const supabase = createClient(supabaseUrl, supabaseKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -74,13 +74,39 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Generate a unique name if needed
+    let finalName = name || 'My Wishlist';
+
+    if (!name || name === 'My Wishlist') {
+      // Check if user already has a wishlist with this name
+      const { data: existingWishlists } = await supabase
+        .from('wishlists')
+        .select('name')
+        .eq('group_id', groupId)
+        .eq('user_id', user.id)
+        .like('name', 'My Wishlist%');
+
+      if (existingWishlists && existingWishlists.length > 0) {
+        // Find the next available number
+        const numbers = existingWishlists
+          .map(w => {
+            const match = w.name.match(/^My Wishlist(?: (\d+))?$/);
+            return match ? parseInt(match[1] || '0') : 0;
+          })
+          .sort((a, b) => b - a);
+
+        const nextNumber = numbers[0] + 1;
+        finalName = nextNumber === 1 ? 'My Wishlist 2' : `My Wishlist ${nextNumber}`;
+      }
+    }
+
     // Create the wishlist
     const { data: wishlist, error: insertError } = await supabase
       .from('wishlists')
       .insert({
         group_id: groupId,
         user_id: user.id,
-        name: name || 'My Wishlist',
+        name: finalName,
         is_default: false,
       })
       .select()

@@ -19,7 +19,7 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const authHeader = req.headers.get('Authorization')!;
-    
+
     const supabase = createClient(supabaseUrl, supabaseKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -116,6 +116,21 @@ const handler = async (req: Request): Promise<Response> => {
       return new Response(
         JSON.stringify({ error: memberError.message }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Ensure user has a role entry (use upsert to handle existing entries safely)
+    const { error: roleError } = await supabase.rpc('upsert_user_role_safe', {
+      p_group_id: invitation.group_id,
+      p_user_id: user.id,
+      p_role: 'member'
+    });
+
+    if (roleError) {
+      console.error("User role upsert error:", roleError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to assign user role. Please contact support.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
