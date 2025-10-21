@@ -35,6 +35,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const { groupId, name }: CreateWishlistRequest = await req.json();
+    console.log('create-wishlist payload:', { groupId, providedName: name });
 
     // Validate inputs
     if (!groupId || typeof groupId !== 'string') {
@@ -80,6 +81,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Helper to generate a unique default name like "My Wishlist", "My Wishlist 2", "My Wishlist 3", ...
     const generateNextDefaultName = async (): Promise<string> => {
       const baseName = 'My Wishlist';
+      console.log("Base name:", baseName);
 
       const { data: existingWishlists } = await supabase
         .from('wishlists')
@@ -87,6 +89,7 @@ const handler = async (req: Request): Promise<Response> => {
         .eq('group_id', groupId)
         .eq('user_id', user.id)
         .like('name', `${baseName}%`);
+      console.log('Existing default-like names for user/group:', existingWishlists?.map(w => w.name));
 
       const usedNumbers = new Set<number>();
       (existingWishlists || []).forEach((w) => {
@@ -135,11 +138,13 @@ const handler = async (req: Request): Promise<Response> => {
     } else {
       finalName = await generateNextDefaultName();
     }
+    console.log('Determined finalName:', { finalName, userProvidedName });
 
     // Insert with retry on unique constraint violations to handle race conditions
     const maxAttempts = 5;
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      const { data: wishlist, error: insertError } = await supabase
+      console.log('Attempting insert', { attempt: attempt + 1, finalName });
+      const { data: wishlist, error: insertError, status: insertStatus } = await supabase
         .from('wishlists')
         .insert({
           group_id: groupId,
@@ -161,7 +166,8 @@ const handler = async (req: Request): Promise<Response> => {
       if (insertError) {
         const message = (insertError as any)?.message || '';
         const code = (insertError as any)?.code;
-        const isUniqueViolation = code === '23505' || message.toLowerCase().includes('duplicate key value');
+        const isUniqueViolation = insertStatus === 409 || code === '23505' || message.toLowerCase().includes('duplicate key value') || message.toLowerCase().includes('conflict');
+        console.warn('Insert attempt failed', { attempt: attempt + 1, finalName, insertStatus, code, message });
 
         // If duplicate and the user explicitly chose the name, return 409 immediately
         if (isUniqueViolation && userProvidedName) {

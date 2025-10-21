@@ -35,6 +35,7 @@ const GroupDetail = () => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [creatingWishlist, setCreatingWishlist] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -139,6 +140,7 @@ const GroupDetail = () => {
     if (!currentUserId) return;
 
     try {
+      setCreatingWishlist(true);
       // Don't send a fixed name; let the server generate a unique default
       const { data, error } = await supabase.functions.invoke('create-wishlist', {
         body: { groupId },
@@ -150,6 +152,8 @@ const GroupDetail = () => {
       navigate(`/wishlists/${data.wishlist.id}`);
     } catch (error: any) {
       toast.error(error.message || "Failed to create wishlist");
+    } finally {
+      setCreatingWishlist(false);
     }
   };
 
@@ -226,10 +230,11 @@ const GroupDetail = () => {
                 <Button
                   size="sm"
                   onClick={handleCreateWishlist}
+                  disabled={creatingWishlist}
                   className="gap-2"
                 >
                   <Plus className="w-4 h-4" />
-                  Create Wishlist
+                  {creatingWishlist ? 'Creating...' : 'Create Wishlist'}
                 </Button>
               </div>
             </CardHeader>
