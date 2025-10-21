@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Users, Mail, Gift, Plus } from "lucide-react";
 import { toast } from "sonner";
 import InviteMemberDialog from "@/components/InviteMemberDialog";
+import CreateWishlistDialog from "@/components/CreateWishlistDialog";
 import { maskEmail } from "@/lib/email-utils";
 
 interface Member {
@@ -34,8 +35,8 @@ const GroupDetail = () => {
   const [wishlists, setWishlists] = useState<Wishlist[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [createWishlistDialogOpen, setCreateWishlistDialogOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [creatingWishlist, setCreatingWishlist] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -136,25 +137,9 @@ const GroupDetail = () => {
     }
   };
 
-  const handleCreateWishlist = async () => {
-    if (!currentUserId) return;
-
-    try {
-      setCreatingWishlist(true);
-      // Don't send a fixed name; let the server generate a unique default
-      const { data, error } = await supabase.functions.invoke('create-wishlist', {
-        body: { groupId },
-      });
-
-      if (error) throw error;
-
-      toast.success("Wishlist created!");
-      navigate(`/wishlists/${data.wishlist.id}`);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create wishlist");
-    } finally {
-      setCreatingWishlist(false);
-    }
+  const handleWishlistCreated = (wishlistId: string) => {
+    fetchGroupData();
+    navigate(`/wishlists/${wishlistId}`);
   };
 
   if (loading) {
@@ -229,12 +214,11 @@ const GroupDetail = () => {
                 </div>
                 <Button
                   size="sm"
-                  onClick={handleCreateWishlist}
-                  disabled={creatingWishlist}
+                  onClick={() => setCreateWishlistDialogOpen(true)}
                   className="gap-2"
                 >
                   <Plus className="w-4 h-4" />
-                  {creatingWishlist ? 'Creating...' : 'Create Wishlist'}
+                  Create Wishlist
                 </Button>
               </div>
             </CardHeader>
@@ -272,6 +256,13 @@ const GroupDetail = () => {
         open={inviteDialogOpen}
         onOpenChange={setInviteDialogOpen}
         onSuccess={fetchGroupData}
+      />
+
+      <CreateWishlistDialog
+        groupId={groupId || ""}
+        open={createWishlistDialogOpen}
+        onOpenChange={setCreateWishlistDialogOpen}
+        onSuccess={handleWishlistCreated}
       />
     </Layout>
   );

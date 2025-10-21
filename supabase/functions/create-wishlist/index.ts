@@ -78,9 +78,21 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Helper to generate a unique default name like "My Wishlist", "My Wishlist 2", "My Wishlist 3", ...
+    // Helper to generate a unique default name like "John's Wishlist", "John's Wishlist 2", "John's Wishlist 3", ...
     const generateNextDefaultName = async (): Promise<string> => {
-      const baseName = 'My Wishlist';
+      // Fetch user's profile to get their name
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('name')
+        .eq('id', user.id)
+        .single();
+
+      let baseName = 'My Wishlist';
+      if (profile?.name) {
+        // Extract first name (everything before the first space)
+        const firstName = profile.name.split(' ')[0];
+        baseName = `${firstName}'s Wishlist`;
+      }
       console.log("Base name:", baseName);
 
       const { data: existingWishlists } = await supabase
@@ -92,8 +104,11 @@ const handler = async (req: Request): Promise<Response> => {
       console.log('Existing default-like names for user/group:', existingWishlists?.map(w => w.name));
 
       const usedNumbers = new Set<number>();
+      // Escape special regex characters in the baseName (like apostrophes)
+      const escapedBaseName = baseName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const pattern = new RegExp(`^${escapedBaseName}(?: (\\d+))?$`);
       (existingWishlists || []).forEach((w) => {
-        const match = w.name.match(/^My Wishlist(?: (\d+))?$/);
+        const match = w.name.match(pattern);
         if (match) {
           const num = match[1] ? parseInt(match[1], 10) : 0; // 0 represents the base name without a number
           if (!Number.isNaN(num)) usedNumbers.add(num);
@@ -110,7 +125,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Determine final name and handle duplicates
     const trimmedName = (name ?? '').trim();
     const userProvidedName = trimmedName.length > 0;
-    let finalName = userProvidedName ? trimmedName : 'My Wishlist';
+    let finalName = trimmedName;
 
     if (userProvidedName) {
       const { data: dupCheck, error: dupCheckError } = await supabase
