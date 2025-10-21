@@ -139,11 +139,9 @@ const GroupDetail = () => {
     if (!currentUserId) return;
 
     try {
+      // Don't send a fixed name; let the server generate a unique default
       const { data, error } = await supabase.functions.invoke('create-wishlist', {
-        body: {
-          groupId,
-          name: "My Wishlist",
-        },
+        body: { groupId },
       });
 
       if (error) throw error;

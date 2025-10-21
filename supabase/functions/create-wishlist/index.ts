@@ -38,6 +38,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Validate inputs
     if (!groupId || typeof groupId !== 'string') {
+      console.log('Group ID is required and must be a string', groupId);
       return new Response(
         JSON.stringify({ error: 'Group ID is required and must be a string' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -45,6 +46,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     if (name && typeof name !== 'string') {
+      console.log('Name must be a string', name);
       return new Response(
         JSON.stringify({ error: 'Name must be a string' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -52,6 +54,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     if (name && name.length > 200) {
+      console.log('Name must be less than 200 characters', name);
       return new Response(
         JSON.stringify({ error: 'Name must be less than 200 characters' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -74,57 +77,119 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Generate a unique name if needed
-    let finalName = name || 'My Wishlist';
+    // Helper to generate a unique default name like "My Wishlist", "My Wishlist 2", "My Wishlist 3", ...
+    const generateNextDefaultName = async (): Promise<string> => {
+      const baseName = 'My Wishlist';
 
-    if (!name || name === 'My Wishlist') {
-      // Check if user already has a wishlist with this name
       const { data: existingWishlists } = await supabase
         .from('wishlists')
         .select('name')
         .eq('group_id', groupId)
         .eq('user_id', user.id)
-        .like('name', 'My Wishlist%');
+        .like('name', `${baseName}%`);
 
-      if (existingWishlists && existingWishlists.length > 0) {
-        // Find the next available number
-        const numbers = existingWishlists
-          .map(w => {
-            const match = w.name.match(/^My Wishlist(?: (\d+))?$/);
-            return match ? parseInt(match[1] || '0') : 0;
-          })
-          .sort((a, b) => b - a);
+      const usedNumbers = new Set<number>();
+      (existingWishlists || []).forEach((w) => {
+        const match = w.name.match(/^My Wishlist(?: (\d+))?$/);
+        if (match) {
+          const num = match[1] ? parseInt(match[1], 10) : 0; // 0 represents the base name without a number
+          if (!Number.isNaN(num)) usedNumbers.add(num);
+        }
+      });
 
-        const nextNumber = numbers[0] + 1;
-        finalName = nextNumber === 1 ? 'My Wishlist 2' : `My Wishlist ${nextNumber}`;
+      // If base name not used, return it. Otherwise, find the smallest available suffix starting at 2
+      if (!usedNumbers.has(0)) return baseName;
+      let suffix = 2;
+      while (usedNumbers.has(suffix)) suffix += 1;
+      return `${baseName} ${suffix}`;
+    };
+
+    // Determine final name and handle duplicates
+    const trimmedName = (name ?? '').trim();
+    const userProvidedName = trimmedName.length > 0;
+    let finalName = userProvidedName ? trimmedName : 'My Wishlist';
+
+    if (userProvidedName) {
+      const { data: dupCheck, error: dupCheckError } = await supabase
+        .from('wishlists')
+        .select('id')
+        .eq('group_id', groupId)
+        .eq('user_id', user.id)
+        .eq('name', finalName)
+        .limit(1);
+
+      if (dupCheckError) {
+        console.error('Duplicate check error:', dupCheckError);
+        return new Response(
+          JSON.stringify({ error: 'Could not verify uniqueness' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (dupCheck && dupCheck.length > 0) {
+        return new Response(
+          JSON.stringify({ error: `You already have a wishlist named "${finalName}" in this group` }),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } else {
+      finalName = await generateNextDefaultName();
+    }
+
+    // Insert with retry on unique constraint violations to handle race conditions
+    const maxAttempts = 5;
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const { data: wishlist, error: insertError } = await supabase
+        .from('wishlists')
+        .insert({
+          group_id: groupId,
+          user_id: user.id,
+          name: finalName,
+          is_default: false,
+        })
+        .select()
+        .single();
+
+      if (!insertError && wishlist) {
+        console.log('Wishlist created successfully:', wishlist.id);
+        return new Response(
+          JSON.stringify({ success: true, wishlist }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (insertError) {
+        const message = (insertError as any)?.message || '';
+        const code = (insertError as any)?.code;
+        const isUniqueViolation = code === '23505' || message.toLowerCase().includes('duplicate key value');
+
+        // If duplicate and the user explicitly chose the name, return 409 immediately
+        if (isUniqueViolation && userProvidedName) {
+          return new Response(
+            JSON.stringify({ error: `You already have a wishlist named "${finalName}" in this group` }),
+            { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // If duplicate while auto-generating, regenerate and retry
+        if (isUniqueViolation && !userProvidedName) {
+          console.warn(`Unique violation on attempt ${attempt + 1}, regenerating name...`);
+          finalName = await generateNextDefaultName();
+          continue;
+        }
+
+        console.error('Wishlist insert error:', insertError);
+        return new Response(
+          JSON.stringify({ error: message || 'Failed to create wishlist' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
     }
 
-    // Create the wishlist
-    const { data: wishlist, error: insertError } = await supabase
-      .from('wishlists')
-      .insert({
-        group_id: groupId,
-        user_id: user.id,
-        name: finalName,
-        is_default: false,
-      })
-      .select()
-      .single();
-
-    if (insertError) {
-      console.error("Wishlist insert error:", insertError);
-      return new Response(
-        JSON.stringify({ error: insertError.message }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log("Wishlist created successfully:", wishlist.id);
-
+    // If we exhausted retries due to contention
     return new Response(
-      JSON.stringify({ success: true, wishlist }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: 'Could not create wishlist due to concurrent requests. Please try again.' }),
+      { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
     console.error("Error in create-wishlist function:", error);
