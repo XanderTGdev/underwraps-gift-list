@@ -5,11 +5,21 @@ import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, ExternalLink, Gift, Calendar } from "lucide-react";
+import { Loader2, Plus, ExternalLink, Gift, Calendar, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import AddItemDialog from "@/components/AddItemDialog";
 import EditItemDialog from "@/components/EditItemDialog";
 import ClaimItemDialog from "@/components/ClaimItemDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Item {
   id: string;
@@ -40,6 +50,8 @@ const Wishlist = () => {
   const [claimDialogOpen, setClaimDialogOpen] = useState(false);
   const [claimingItem, setClaimingItem] = useState<Item | null>(null);
   const [groupId, setGroupId] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -97,16 +109,16 @@ const Wishlist = () => {
         ...item,
         claims: item.item_claims
       })) || [];
-      
+
       // Sort items: unclaimed first, then claimed
       const sortedItems = mappedItems.sort((a, b) => {
         const aIsClaimed = a.claims && a.claims.length > 0 && !a.allow_multiple_claims;
         const bIsClaimed = b.claims && b.claims.length > 0 && !b.allow_multiple_claims;
-        
+
         if (aIsClaimed === bIsClaimed) return 0;
         return aIsClaimed ? 1 : -1;
       });
-      
+
       setItems(sortedItems);
     } catch (error: any) {
       toast.error("Failed to load wishlist");
@@ -183,6 +195,25 @@ const Wishlist = () => {
     return item.claims && item.claims.length > 0 && !item.allow_multiple_claims;
   };
 
+  const handleDeleteWishlist = async () => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase.functions.invoke('delete-wishlist', {
+        body: { wishlistId },
+      });
+
+      if (error) throw error;
+
+      toast.success("Wishlist deleted successfully");
+      navigate(`/groups/${groupId}`);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete wishlist");
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+    }
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -204,13 +235,23 @@ const Wishlist = () => {
             </p>
           </div>
           {isOwner && (
-            <Button
-              onClick={() => setAddDialogOpen(true)}
-              className="gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Add Item
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteDialogOpen(true)}
+                className="gap-2 text-destructive hover:text-destructive"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Wishlist
+              </Button>
+              <Button
+                onClick={() => setAddDialogOpen(true)}
+                className="gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Add Item
+              </Button>
+            </div>
           )}
         </div>
 
@@ -240,110 +281,108 @@ const Wishlist = () => {
             {items.map((item) => {
               const isFullyClaimed = isItemFullyClaimed(item);
               const isUserClaim = getUserClaim(item);
-              
+
               return (
-              <Card 
-                key={item.id} 
-                className={`overflow-hidden transition-all ${
-                  isOwner ? 'cursor-pointer' : ''
-                } ${
-                  isFullyClaimed && !isUserClaim 
-                    ? 'opacity-30 grayscale pointer-events-none' 
-                    : 'hover:border-teal-500 hover:shadow-lg'
-                }`}
-                onClick={() => {
-                  if (isOwner) {
-                    setEditingItem(item);
-                    setEditDialogOpen(true);
-                  }
-                }}
-              >
-                {item.image_url && (
-                  <div className="aspect-video bg-gray-100 dark:bg-slate-800 overflow-hidden relative">
-                    <img
-                      src={item.image_url}
-                      alt={item.title}
-                      className="w-full h-full object-cover"
-                    />
-                    {isFullyClaimed && !isUserClaim && (
-                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                        <Badge variant="secondary" className="text-lg font-semibold">Unavailable</Badge>
-                      </div>
-                    )}
-                  </div>
-                )}
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-lg line-clamp-2 text-slate-900 dark:text-slate-100">{item.title}</CardTitle>
-                    {item.price && (
-                      <span className="text-rose-500 dark:text-rose-400 font-bold whitespace-nowrap">
-                        {item.currency} {item.price.toFixed(2)}
-                      </span>
-                    )}
-                  </div>
-                  {item.note && (
-                    <CardDescription className="line-clamp-2">{item.note}</CardDescription>
+                <Card
+                  key={item.id}
+                  className={`overflow-hidden transition-all ${isOwner ? 'cursor-pointer' : ''
+                    } ${isFullyClaimed && !isUserClaim
+                      ? 'opacity-30 grayscale pointer-events-none'
+                      : 'hover:border-teal-500 hover:shadow-lg'
+                    }`}
+                  onClick={() => {
+                    if (isOwner) {
+                      setEditingItem(item);
+                      setEditDialogOpen(true);
+                    }
+                  }}
+                >
+                  {item.image_url && (
+                    <div className="aspect-video bg-gray-100 dark:bg-slate-800 overflow-hidden relative">
+                      <img
+                        src={item.image_url}
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                      />
+                      {isFullyClaimed && !isUserClaim && (
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                          <Badge variant="secondary" className="text-lg font-semibold">Unavailable</Badge>
+                        </div>
+                      )}
+                    </div>
                   )}
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    {getClaimStatus(item)}
-                    {item.quantity > 1 && (
-                      <Badge variant="outline">Qty: {item.quantity}</Badge>
+                  <CardHeader>
+                    <div className="flex items-start justify-between gap-2">
+                      <CardTitle className="text-lg line-clamp-2 text-slate-900 dark:text-slate-100">{item.title}</CardTitle>
+                      {item.price && (
+                        <span className="text-rose-500 dark:text-rose-400 font-bold whitespace-nowrap">
+                          {item.currency} {item.price.toFixed(2)}
+                        </span>
+                      )}
+                    </div>
+                    {item.note && (
+                      <CardDescription className="line-clamp-2">{item.note}</CardDescription>
                     )}
-                  </div>
-                  <div className="flex gap-2">
-                    {item.url && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 gap-2"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          window.open(item.url, "_blank");
-                        }}
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                        View Item
-                      </Button>
-                    )}
-                    {!isOwner && (
-                      <>
-                        {canClaimItem(item) && (
-                          <Button
-                            variant="default"
-                            size="sm"
-                            className={`gap-2 ${!item.url ? 'flex-1' : ''}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setClaimingItem(item);
-                              setClaimDialogOpen(true);
-                            }}
-                            disabled={isFullyClaimed && !isUserClaim}
-                          >
-                            <Gift className="w-4 h-4" />
-                            Claim
-                          </Button>
-                        )}
-                        {getUserClaim(item) && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className={`gap-2 ${!item.url ? 'flex-1' : ''}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleUnclaim(getUserClaim(item).id);
-                            }}
-                          >
-                            Unclaim
-                          </Button>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      {getClaimStatus(item)}
+                      {item.quantity > 1 && (
+                        <Badge variant="outline">Qty: {item.quantity}</Badge>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      {item.url && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 gap-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(item.url, "_blank");
+                          }}
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          View Item
+                        </Button>
+                      )}
+                      {!isOwner && (
+                        <>
+                          {canClaimItem(item) && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className={`gap-2 ${!item.url ? 'flex-1' : ''}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setClaimingItem(item);
+                                setClaimDialogOpen(true);
+                              }}
+                              disabled={isFullyClaimed && !isUserClaim}
+                            >
+                              <Gift className="w-4 h-4" />
+                              Claim
+                            </Button>
+                          )}
+                          {getUserClaim(item) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className={`gap-2 ${!item.url ? 'flex-1' : ''}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleUnclaim(getUserClaim(item).id);
+                              }}
+                            >
+                              Unclaim
+                            </Button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
             })}
           </div>
         )}
@@ -370,6 +409,34 @@ const Wishlist = () => {
         onOpenChange={setClaimDialogOpen}
         onSuccess={fetchWishlist}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete your wishlist "{wishlistName}" and all items in it. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteWishlist}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete Wishlist"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 };

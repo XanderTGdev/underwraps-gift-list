@@ -1,5 +1,8 @@
 project_id = "rjmavtwxceztljclbtfj"
 
+[functions.delete-wishlist]
+verify_jwt = true
+
 [functions.fetch-product-metadata]
 verify_jwt = true
 
