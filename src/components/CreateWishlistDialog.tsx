@@ -29,6 +29,7 @@ const CreateWishlistDialog = ({
 }: CreateWishlistDialogProps) => {
   const [wishlistName, setWishlistName] = useState("");
   const [defaultName, setDefaultName] = useState("");
+  const [firstName, setFirstName] = useState("");
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -45,10 +46,12 @@ const CreateWishlistDialog = ({
 
           if (profile?.name) {
             // Extract first name (everything before the first space)
-            const firstName = profile.name.split(" ")[0];
-            const defaultWishlistName = `${firstName}'s Wishlist`;
+            const extractedFirstName = profile.name.split(" ")[0];
+            setFirstName(extractedFirstName);
+            const defaultWishlistName = `${extractedFirstName}'s Wishlist`;
             setDefaultName(defaultWishlistName);
           } else {
+            setFirstName("");
             setDefaultName("My Wishlist");
           }
         }
@@ -61,11 +64,19 @@ const CreateWishlistDialog = ({
   const handleCreate = async () => {
     setCreating(true);
     try {
-      // Use the entered name, or empty string to trigger server-side default
-      const nameToSend = wishlistName.trim() || undefined;
+      // Sanitize input - remove control characters and trim
+      const sanitizedName = wishlistName.replace(/[\x00-\x1F\x7F]/g, '').trim();
+      const sanitizedFirstName = firstName.replace(/[\x00-\x1F\x7F]/g, '').trim();
+
+      // If user provided a name, use it. Otherwise, send undefined to trigger auto-generation
+      const nameToSend = sanitizedName || undefined;
 
       const { data, error } = await supabase.functions.invoke('create-wishlist', {
-        body: { groupId, name: nameToSend },
+        body: {
+          groupId,
+          name: nameToSend,
+          userFirstName: sanitizedFirstName || undefined // Pass first name for default generation
+        },
       });
 
       if (error) throw error;

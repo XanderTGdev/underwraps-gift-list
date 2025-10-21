@@ -9,6 +9,7 @@ const corsHeaders = {
 interface CreateWishlistRequest {
   groupId: string;
   name?: string;
+  userFirstName?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -34,8 +35,15 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { groupId, name }: CreateWishlistRequest = await req.json();
-    console.log('create-wishlist payload:', { groupId, providedName: name });
+    const { groupId, name, userFirstName }: CreateWishlistRequest = await req.json();
+    console.log('create-wishlist payload:', { groupId, providedName: name, userFirstName });
+
+    // Sanitization helper - removes control characters and trims
+    const sanitizeString = (str: string): string => {
+      return str
+        .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
+        .trim();
+    };
 
     // Validate inputs
     if (!groupId || typeof groupId !== 'string') {
@@ -46,7 +54,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    if (name && typeof name !== 'string') {
+    if (name !== undefined && typeof name !== 'string') {
       console.log('Name must be a string', name);
       return new Response(
         JSON.stringify({ error: 'Name must be a string' }),
@@ -54,10 +62,30 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    if (name && name.length > 200) {
-      console.log('Name must be less than 200 characters', name);
+    if (userFirstName !== undefined && typeof userFirstName !== 'string') {
+      console.log('User first name must be a string', userFirstName);
+      return new Response(
+        JSON.stringify({ error: 'User first name must be a string' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Sanitize inputs
+    const sanitizedName = name ? sanitizeString(name) : undefined;
+    const sanitizedFirstName = userFirstName ? sanitizeString(userFirstName) : undefined;
+
+    if (sanitizedName && sanitizedName.length > 200) {
+      console.log('Name must be less than 200 characters', sanitizedName);
       return new Response(
         JSON.stringify({ error: 'Name must be less than 200 characters' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (sanitizedFirstName && sanitizedFirstName.length > 100) {
+      console.log('First name must be less than 100 characters', sanitizedFirstName);
+      return new Response(
+        JSON.stringify({ error: 'First name must be less than 100 characters' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -79,19 +107,10 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Helper to generate a unique default name like "John's Wishlist", "John's Wishlist 2", "John's Wishlist 3", ...
-    const generateNextDefaultName = async (): Promise<string> => {
-      // Fetch user's profile to get their name
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('name')
-        .eq('id', user.id)
-        .single();
-
+    const generateNextDefaultName = async (firstName?: string): Promise<string> => {
       let baseName = 'My Wishlist';
-      if (profile?.name) {
-        // Extract first name (everything before the first space)
-        const firstName = profile.name.split(' ')[0];
-        baseName = `${firstName}'s Wishlist`;
+      if (firstName && firstName.trim()) {
+        baseName = `${firstName.trim()}'s Wishlist`;
       }
       console.log("Base name:", baseName);
 
@@ -123,9 +142,8 @@ const handler = async (req: Request): Promise<Response> => {
     };
 
     // Determine final name and handle duplicates
-    const trimmedName = (name ?? '').trim();
-    const userProvidedName = trimmedName.length > 0;
-    let finalName = trimmedName;
+    const userProvidedName = sanitizedName && sanitizedName.length > 0;
+    let finalName = sanitizedName || '';
 
     if (userProvidedName) {
       const { data: dupCheck, error: dupCheckError } = await supabase
@@ -151,7 +169,7 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
     } else {
-      finalName = await generateNextDefaultName();
+      finalName = await generateNextDefaultName(sanitizedFirstName);
     }
     console.log('Determined finalName:', { finalName, userProvidedName });
 
@@ -195,7 +213,7 @@ const handler = async (req: Request): Promise<Response> => {
         // If duplicate while auto-generating, regenerate and retry
         if (isUniqueViolation && !userProvidedName) {
           console.warn(`Unique violation on attempt ${attempt + 1}, regenerating name...`);
-          finalName = await generateNextDefaultName();
+          finalName = await generateNextDefaultName(sanitizedFirstName);
           continue;
         }
 
