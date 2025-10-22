@@ -120,6 +120,21 @@ const handler = async (req: Request): Promise<Response> => {
       console.warn("Warning: group created but failed to add owner as member:", memberError);
     }
 
+    // Also add the owner role in user_roles table
+    const { error: roleError } = await supabaseAdmin
+      .from('user_roles')
+      .insert({
+        user_id: user.id,
+        group_id: group.id,
+        role: 'owner',
+      });
+
+    if (roleError) {
+      console.error("User role insert error:", roleError);
+      // Don't fail the request - the group was created successfully
+      console.warn("Warning: group created but failed to add owner role:", roleError);
+    }
+
     console.log("Group created successfully:", group.id);
 
     return new Response(
