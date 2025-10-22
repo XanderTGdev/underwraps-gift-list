@@ -63,7 +63,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // 3. Authorization - Check if user is owner or admin
     const { data: userRole, error: roleError } = await supabase
-      .from('group_members')
+      .from('user_roles')
       .select('role')
       .eq('group_id', groupId)
       .eq('user_id', user.id)
