@@ -18,11 +18,15 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const authHeader = req.headers.get('Authorization')!;
 
     const supabase = createClient(supabaseUrl, supabaseKey, {
       global: { headers: { Authorization: authHeader } },
     });
+
+    // Service role client for bypass operations
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
@@ -99,6 +103,21 @@ const handler = async (req: Request): Promise<Response> => {
         JSON.stringify({ error: groupError.message }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Add the creator as the owner member of the group
+    const { error: memberError } = await supabaseAdmin
+      .from('group_members')
+      .insert({
+        group_id: group.id,
+        user_id: user.id,
+        role: 'owner',
+      });
+
+    if (memberError) {
+      console.error("Group member insert error:", memberError);
+      // Don't fail the request - the group was created successfully
+      console.warn("Warning: group created but failed to add owner as member:", memberError);
     }
 
     console.log("Group created successfully:", group.id);
