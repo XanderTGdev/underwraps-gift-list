@@ -19,7 +19,7 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const authHeader = req.headers.get('Authorization')!;
-    
+
     const supabase = createClient(supabaseUrl, supabaseKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -33,17 +33,50 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { name }: CreateGroupRequest = await req.json();
+    // Better error handling for body parsing
+    let requestBody: CreateGroupRequest;
+    try {
+      requestBody = await req.json();
+      console.log('Parsed request body:', requestBody);
+    } catch (parseError) {
+      console.error("Error parsing request body:", parseError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { name } = requestBody;
+    console.log('Extracted name:', name, 'Type:', typeof name);
+
+    // Sanitization helper - removes control characters and trims
+    const sanitizeString = (str: string): string => {
+      return str
+        .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
+        .trim();
+    };
 
     // Validate inputs
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+    if (!name || typeof name !== 'string') {
+      console.error('Validation failed:', { name, type: typeof name });
       return new Response(
         JSON.stringify({ error: 'Name is required and must be a non-empty string' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (name.length > 200) {
+    // Sanitize the name
+    const sanitizedName = sanitizeString(name);
+
+    if (!sanitizedName || sanitizedName.length === 0) {
+      console.error('Name is empty after sanitization');
+      return new Response(
+        JSON.stringify({ error: 'Name is required and must be a non-empty string' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (sanitizedName.length > 200) {
       return new Response(
         JSON.stringify({ error: 'Name must be less than 200 characters' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -54,7 +87,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: group, error: groupError } = await supabase
       .from('groups')
       .insert({
-        name: name.trim(),
+        name: sanitizedName,
         owner_id: user.id,
       })
       .select()

@@ -75,10 +75,17 @@ const Groups = () => {
     e.preventDefault();
     if (!userId) return;
 
+    // Sanitize input - remove control characters and trim
+    const sanitizedName = newGroupName.replace(/[\x00-\x1F\x7F]/g, '').trim();
+    if (!sanitizedName) {
+      toast.error("Please enter a group name");
+      return;
+    }
+
     setCreating(true);
     try {
       const { data, error } = await supabase.functions.invoke('create-group', {
-        body: { name: newGroupName },
+        body: { name: sanitizedName },
       });
 
       if (error) throw error;
@@ -88,6 +95,7 @@ const Groups = () => {
       setNewGroupName("");
       fetchGroups();
     } catch (error: any) {
+      console.error("Create group error:", error);
       toast.error(error.message || "Failed to create group");
     } finally {
       setCreating(false);
