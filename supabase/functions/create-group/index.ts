@@ -99,11 +99,19 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (groupError) {
       console.error("Group insert error:", groupError);
+      console.error("Group error details:", {
+        message: groupError.message,
+        code: groupError.code,
+        details: groupError.details,
+        hint: groupError.hint,
+      });
       return new Response(
-        JSON.stringify({ error: groupError.message }),
+        JSON.stringify({ error: `Failed to create group: ${groupError.message}` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log("Group created successfully:", group.id);
 
     // Add the creator as the owner member of the group
     // The handle_new_member trigger will automatically assign the owner role
@@ -116,8 +124,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (memberError) {
       console.error("Group member insert error:", memberError);
-      // Don't fail the request - the group was created successfully
-      console.warn("Warning: group created but failed to add owner as member:", memberError);
+      console.error("Member error details:", {
+        message: memberError.message,
+        code: memberError.code,
+        details: memberError.details,
+        hint: memberError.hint,
+      });
     }
 
     // Also add the owner role in user_roles table
@@ -131,11 +143,15 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (roleError) {
       console.error("User role insert error:", roleError);
-      // Don't fail the request - the group was created successfully
-      console.warn("Warning: group created but failed to add owner role:", roleError);
+      console.error("Role error details:", {
+        message: roleError.message,
+        code: roleError.code,
+        details: roleError.details,
+        hint: roleError.hint,
+      });
     }
 
-    console.log("Group created successfully:", group.id);
+    console.log("Group created successfully with membership and roles:", group.id);
 
     return new Response(
       JSON.stringify({ success: true, group }),
