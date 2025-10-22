@@ -5,10 +5,11 @@ import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Users, Mail, Gift, Plus } from "lucide-react";
+import { Loader2, Users, Mail, Gift, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import InviteMemberDialog from "@/components/InviteMemberDialog";
 import CreateWishlistDialog from "@/components/CreateWishlistDialog";
+import DeleteGroupDialog from "@/components/DeleteGroupDialog";
 import { maskEmail } from "@/lib/email-utils";
 
 interface Member {
@@ -36,24 +37,33 @@ const GroupDetail = () => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [createWishlistDialogOpen, setCreateWishlistDialogOpen] = useState(false);
+  const [deleteGroupDialogOpen, setDeleteGroupDialogOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    checkAuth();
-    fetchGroupData();
+    const initializeData = async () => {
+      const userId = await checkAuth();
+      if (userId) {
+        fetchGroupData(userId);
+      }
+    };
+    initializeData();
   }, [groupId]);
 
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       navigate("/auth");
-      return;
+      return null;
     }
     setCurrentUserId(user.id);
+    return user.id;
   };
 
-  const fetchGroupData = async () => {
+  const fetchGroupData = async (userId?: string) => {
     try {
+      const userIdToUse = userId || currentUserId;
+
       const { data: group, error: groupError } = await supabase
         .from("groups")
         .select("name")
@@ -64,12 +74,12 @@ const GroupDetail = () => {
       setGroupName(group.name);
 
       // Check if current user is admin/owner
-      if (currentUserId) {
-        const { data: userRole } = await supabase
+      if (userIdToUse) {
+        const { data: userRole, error: roleError } = await supabase
           .from("user_roles")
           .select("role")
           .eq("group_id", groupId)
-          .eq("user_id", currentUserId)
+          .eq("user_id", userIdToUse)
           .single();
 
         setIsAdmin(userRole?.role === 'owner' || userRole?.role === 'admin');
@@ -156,7 +166,20 @@ const GroupDetail = () => {
     <Layout>
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">{groupName}</h1>
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-3xl font-bold">{groupName}</h1>
+            {isAdmin && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setDeleteGroupDialogOpen(true)}
+                className="gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Group
+              </Button>
+            )}
+          </div>
           <p className="text-muted-foreground">
             Manage members and view wishlists
           </p>
@@ -263,6 +286,13 @@ const GroupDetail = () => {
         open={createWishlistDialogOpen}
         onOpenChange={setCreateWishlistDialogOpen}
         onSuccess={handleWishlistCreated}
+      />
+
+      <DeleteGroupDialog
+        groupId={groupId || ""}
+        groupName={groupName}
+        open={deleteGroupDialogOpen}
+        onOpenChange={setDeleteGroupDialogOpen}
       />
     </Layout>
   );

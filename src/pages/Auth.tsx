@@ -284,6 +284,7 @@ const Auth = () => {
                 <CardFooter>
                   <Button
                     type="submit"
+                    variant="secondary"
                     className="w-full"
                     disabled={loading}
                   >

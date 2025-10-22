@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Gift, Users, ShieldCheck, Sparkles } from "lucide-react";
+import { Gift, Users, ShieldCheck, Heart } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -31,12 +31,13 @@ const Index = () => {
           </h1>
 
           <p className="text-xl text-gray-600 dark:text-slate-400 mb-12 max-w-2xl mx-auto">
-            The secret to perfect gift-giving. Create wishlists, form groups, and claim gifts without spoiling the surprise.
+            Effortlessly coordinate group gifts with friends and family while keeping the magic of surprise alive.
           </p>
 
           <div className="flex gap-4 justify-center mb-16">
             <Button
               size="lg"
+              variant="secondary"
               onClick={() => navigate("/auth")}
               className="gap-2"
             >
@@ -44,7 +45,6 @@ const Index = () => {
             </Button>
             <Button
               size="lg"
-              variant="secondary"
               onClick={() => navigate("/auth")}
             >
               Sign In
@@ -64,6 +64,16 @@ const Index = () => {
 
             <div className="p-6 rounded-2xl bg-white border border-gray-200 shadow-sm dark:bg-slate-900 dark:border-slate-700">
               <div className="w-12 h-12 rounded-lg bg-rose-400 flex items-center justify-center mb-4 mx-auto dark:bg-rose-400">
+                <Heart className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2 text-slate-900 dark:text-slate-100">Create Wishlists</h3>
+              <p className="text-gray-600 dark:text-slate-400">
+                Create your own wishlist to share with your group
+              </p>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-white border border-gray-200 shadow-sm dark:bg-slate-900 dark:border-slate-700">
+              <div className="w-12 h-12 rounded-lg bg-purple-600 flex items-center justify-center mb-4 mx-auto dark:bg-purple-500">
                 <ShieldCheck className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-lg font-semibold mb-2 text-slate-900 dark:text-slate-100">Secret Claims</h3>
