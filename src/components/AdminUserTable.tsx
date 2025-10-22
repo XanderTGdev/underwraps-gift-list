@@ -47,10 +47,20 @@ export const AdminUserTable = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      
-      // Fetch all profiles
+      // Determine if current user is a global admin
+      const { data: authData } = await supabase.auth.getUser();
+      const currentUserId = authData?.user?.id || null;
+
+      let isGlobalAdmin = false;
+      if (currentUserId) {
+        const { data: isAdminFlag } = await supabase.rpc("is_global_admin", { _user_id: currentUserId });
+        isGlobalAdmin = Boolean(isAdminFlag);
+      }
+
+      // Fetch all profiles - raw emails for global admins, masked emails for others
+      const profilesSource = isGlobalAdmin ? "profiles" : "profiles_with_email";
       const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
+        .from(profilesSource)
         .select("id, name, email")
         .order("email");
 
@@ -90,10 +100,10 @@ export const AdminUserTable = () => {
     try {
       // Business logic moved to edge function for security
       const { data, error } = await supabase.functions.invoke("update-user-role", {
-        body: { 
-          userId, 
+        body: {
+          userId,
           groupId: null, // null for global roles
-          role: newRole === "none" ? null : newRole 
+          role: newRole === "none" ? null : newRole
         },
       });
 
