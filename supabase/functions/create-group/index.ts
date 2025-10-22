@@ -106,12 +106,12 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Add the creator as the owner member of the group
+    // The handle_new_member trigger will automatically assign the owner role
     const { error: memberError } = await supabaseAdmin
       .from('group_members')
       .insert({
         group_id: group.id,
         user_id: user.id,
-        role: 'owner',
       });
 
     if (memberError) {
