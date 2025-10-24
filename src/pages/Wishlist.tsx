@@ -5,7 +5,7 @@ import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, ExternalLink, Gift, Calendar, Trash2 } from "lucide-react";
+import { Loader2, Plus, ExternalLink, Gift, Calendar, Trash2, ArrowLeft, X } from "lucide-react";
 import { toast } from "sonner";
 import AddItemDialog from "@/components/AddItemDialog";
 import EditItemDialog from "@/components/EditItemDialog";
@@ -52,6 +52,9 @@ const Wishlist = () => {
   const [groupId, setGroupId] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteItemDialogOpen, setDeleteItemDialogOpen] = useState(false);
+  const [deletingItem, setDeletingItem] = useState<Item | null>(null);
+  const [isDeletingItem, setIsDeletingItem] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -214,6 +217,38 @@ const Wishlist = () => {
     }
   };
 
+  const handleDeleteWishlistClick = () => {
+    if (items.length === 0) {
+      // No confirmation needed for empty wishlists
+      handleDeleteWishlist();
+    } else {
+      // Show confirmation dialog for wishlists with items
+      setDeleteDialogOpen(true);
+    }
+  };
+
+  const handleDeleteItem = async () => {
+    if (!deletingItem) return;
+
+    setIsDeletingItem(true);
+    try {
+      const { error } = await supabase.functions.invoke('delete-item', {
+        body: { itemId: deletingItem.id },
+      });
+
+      if (error) throw error;
+
+      toast.success("Item deleted successfully");
+      fetchWishlist();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete item");
+    } finally {
+      setIsDeletingItem(false);
+      setDeleteItemDialogOpen(false);
+      setDeletingItem(null);
+    }
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -227,26 +262,47 @@ const Wishlist = () => {
   return (
     <Layout>
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">{wishlistName}</h1>
-            <p className="text-muted-foreground">
-              {isOwner ? "Your wishlist" : `${wishlistName}'s wishlist`}
-            </p>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate(`/groups/${groupId}`)}
+          className="gap-2 px-3 mb-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Group
+        </Button>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="text-center sm:text-left">
+              <h1 className="text-3xl font-bold mb-2">{wishlistName}</h1>
+              <p className="text-muted-foreground">
+                {isOwner ? "Your wishlist" : `${wishlistName}'s wishlist`}
+              </p>
+            </div>
           </div>
           {isOwner && (
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 variant="outline"
-                onClick={() => setDeleteDialogOpen(true)}
-                className="gap-2 text-destructive hover:text-destructive"
+                onClick={handleDeleteWishlistClick}
+                disabled={isDeleting}
+                className="gap-2 text-destructive hover:text-destructive w-full sm:w-auto"
               >
-                <Trash2 className="w-4 h-4" />
-                Delete Wishlist
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete Wishlist
+                  </>
+                )}
               </Button>
               <Button
                 onClick={() => setAddDialogOpen(true)}
-                className="gap-2"
+                className="gap-2 w-full sm:w-auto"
               >
                 <Plus className="w-4 h-4" />
                 Add Item
@@ -277,7 +333,7 @@ const Wishlist = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 items-stretch">
             {items.map((item) => {
               const isFullyClaimed = isItemFullyClaimed(item);
               const isUserClaim = getUserClaim(item);
@@ -285,7 +341,7 @@ const Wishlist = () => {
               return (
                 <Card
                   key={item.id}
-                  className={`overflow-hidden transition-all ${isOwner ? 'cursor-pointer' : ''
+                  className={`group overflow-hidden transition-all flex flex-col h-full ${isOwner ? 'cursor-pointer' : ''
                     } ${isFullyClaimed && !isUserClaim
                       ? 'opacity-30 grayscale pointer-events-none'
                       : 'hover:border-teal-500 hover:shadow-lg'
@@ -297,21 +353,38 @@ const Wishlist = () => {
                     }
                   }}
                 >
-                  {item.image_url && (
-                    <div className="aspect-video bg-gray-100 dark:bg-slate-800 overflow-hidden relative">
+                  <div className="aspect-video bg-gray-100 dark:bg-slate-800 overflow-hidden relative">
+                    {item.image_url ? (
                       <img
                         src={item.image_url}
                         alt={item.title}
                         className="w-full h-full object-cover"
                       />
-                      {isFullyClaimed && !isUserClaim && (
-                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                          <Badge variant="secondary" className="text-lg font-semibold">Unavailable</Badge>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  <CardHeader>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Gift className="w-24 h-24 text-gray-400 dark:text-gray-600" />
+                      </div>
+                    )}
+                    {isFullyClaimed && !isUserClaim && (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                        <Badge variant="secondary" className="text-lg font-semibold">Unavailable</Badge>
+                      </div>
+                    )}
+                    {isOwner && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeletingItem(item);
+                          setDeleteItemDialogOpen(true);
+                        }}
+                        className="absolute top-2 right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors duration-200 opacity-0 group-hover:opacity-100 hover:opacity-100"
+                        title="Delete item"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                  <CardHeader className="flex-shrink-0">
                     <div className="flex items-start justify-between gap-2">
                       <CardTitle className="text-lg line-clamp-2 text-slate-900 dark:text-slate-100">{item.title}</CardTitle>
                       {item.price && (
@@ -324,14 +397,14 @@ const Wishlist = () => {
                       <CardDescription className="line-clamp-2">{item.note}</CardDescription>
                     )}
                   </CardHeader>
-                  <CardContent className="space-y-3">
+                  <CardContent className="space-y-3 flex-grow flex flex-col">
                     <div className="flex items-center gap-2">
                       {getClaimStatus(item)}
                       {item.quantity > 1 && (
                         <Badge variant="outline">Qty: {item.quantity}</Badge>
                       )}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 xmt-auto">
                       {item.url && (
                         <Button
                           variant="outline"
@@ -413,9 +486,22 @@ const Wishlist = () => {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete your wishlist "{wishlistName}" and all items in it. This action cannot be undone.
+            <AlertDialogTitle className="text-destructive">⚠️ Delete Wishlist</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p className="font-semibold text-red-600 dark:text-red-400">
+                This action is permanent and cannot be undone!
+              </p>
+              <p>
+                Deleting your wishlist "{wishlistName}" will:
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-4">
+                <li>Permanently delete all {items.length} item{items.length !== 1 ? 's' : ''} in this wishlist</li>
+                <li>Remove all claims made by other group members</li>
+                <li>Make this wishlist inaccessible to all group members</li>
+              </ul>
+              <p className="font-medium text-center mt-4">
+                Are you sure you want to proceed?
+              </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -432,6 +518,34 @@ const Wishlist = () => {
                 </>
               ) : (
                 "Delete Wishlist"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteItemDialogOpen} onOpenChange={setDeleteItemDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Item</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deletingItem?.title}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingItem}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteItem}
+              disabled={isDeletingItem}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeletingItem ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete Item"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
