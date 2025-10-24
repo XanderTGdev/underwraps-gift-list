@@ -75,23 +75,18 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Validating invitation token");
 
-    // Create Supabase client with service role key for RLS bypass
+    // Create Supabase client with anon key
+    // We'll use a different approach to handle RLS
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
+      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
     );
 
     // Query invitation with service role (bypasses RLS)
     // Use maybeSingle() to avoid errors when no match is found
     const { data: invitation, error: invitationError } = await supabaseAdmin
       .from("invitations")
-      .select("id, group_id, invitee_email, status, expires_at, groups(name)")
+      .select("id, group_id, invitee_email, status, expires_at")
       .eq("token", token.trim())
       .maybeSingle();
 
@@ -113,9 +108,18 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Get group name separately to avoid RLS issues with joins
+    const { data: group, error: groupError } = await supabaseAdmin
+      .from("groups")
+      .select("name")
+      .eq("id", invitation.group_id)
+      .single();
+
+    const groupName = group?.name || "Unknown Group";
+
     // Check if invitation is expired
     const isExpired = new Date(invitation.expires_at) < new Date();
-    
+
     // Check if invitation is valid
     const isValid = invitation.status === "pending" && !isExpired;
 
@@ -132,7 +136,7 @@ const handler = async (req: Request): Promise<Response> => {
         invitation: {
           id: invitation.id,
           groupId: invitation.group_id,
-          groupName: invitation.groups?.name || "Unknown Group",
+          groupName: groupName,
           inviteeEmail: invitation.invitee_email,
           status: invitation.status,
           expiresAt: invitation.expires_at,
