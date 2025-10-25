@@ -45,7 +45,11 @@ export default function AcceptInvite() {
       );
 
       if (validationError || !validationData?.success) {
-        console.error("Validation error:", validationError);
+        console.error("Validation error:", {
+          error: validationError,
+          data: validationData,
+          token: token
+        });
         setStatus(validationData?.status || 'invalid');
         return;
       }
