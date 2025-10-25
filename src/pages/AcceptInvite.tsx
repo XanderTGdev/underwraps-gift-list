@@ -12,7 +12,7 @@ export default function AcceptInvite() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get("token");
-  
+
   const [status, setStatus] = useState<InvitationStatus>('loading');
   const [groupName, setGroupName] = useState<string>("");
   const [invitation, setInvitation] = useState<any>(null);
@@ -55,7 +55,7 @@ export default function AcceptInvite() {
       }
 
       const inviteData = validationData.invitation;
-      
+
       // Create invitation object matching expected format
       const invitation = {
         id: inviteData.id,
@@ -106,7 +106,7 @@ export default function AcceptInvite() {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         toast.error("Please log in to accept this invitation");
         navigate(`/auth?redirect=/accept-invite?token=${token}`);
@@ -132,9 +132,9 @@ export default function AcceptInvite() {
       } else {
         toast.success(`You've joined ${groupName}!`);
       }
-      
+
       setStatus('accepted');
-      
+
       // Redirect to the group after a short delay
       setTimeout(() => {
         navigate(`/groups/${invitation.group_id}`);
@@ -218,9 +218,9 @@ export default function AcceptInvite() {
             <div className="flex justify-center mb-4">
               <CheckCircle2 className="h-16 w-16 text-green-500" />
             </div>
-            <CardTitle>Already Accepted</CardTitle>
+            <CardTitle>Accepted</CardTitle>
             <CardDescription>
-              You've already accepted this invitation to {groupName}.
+              You've accepted this invitation to {groupName}.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -262,16 +262,16 @@ export default function AcceptInvite() {
                 </p>
               </div>
             )}
-            <Button 
-              onClick={handleAcceptInvitation} 
+            <Button
+              onClick={handleAcceptInvitation}
               className="w-full"
               disabled={userEmail !== invitation?.invitee_email}
             >
               Accept Invitation
             </Button>
-            <Button 
-              onClick={() => navigate("/groups")} 
-              variant="outline" 
+            <Button
+              onClick={() => navigate("/groups")}
+              variant="outline"
               className="w-full"
             >
               Cancel
