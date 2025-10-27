@@ -397,14 +397,14 @@ const Wishlist = () => {
                       <CardDescription className="line-clamp-2">{item.note}</CardDescription>
                     )}
                   </CardHeader>
-                  <CardContent className="space-y-3 flex-grow flex flex-col">
+                  <CardContent className="space-y-3 flex-grow flex flex-col justify-between">
                     <div className="flex items-center gap-2">
                       {getClaimStatus(item)}
                       {item.quantity > 1 && (
                         <Badge variant="outline">Qty: {item.quantity}</Badge>
                       )}
                     </div>
-                    <div className="flex gap-2 xmt-auto">
+                    <div className="flex gap-2 mt-auto">
                       {item.url && (
                         <Button
                           variant="outline"
