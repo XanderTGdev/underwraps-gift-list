@@ -61,7 +61,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Verify the invitation is for the current user
     if (user.email !== invitation.invitee_email) {
       return new Response(
-        JSON.stringify({ error: `This invitation is for ${invitation.invitee_email}. Please log in with that email.` }),
+        JSON.stringify({ error: 'This invitation is for a different email address. Please log in with the correct account.' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

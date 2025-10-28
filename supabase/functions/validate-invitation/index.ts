@@ -137,7 +137,6 @@ const handler = async (req: Request): Promise<Response> => {
           id: invitation.id,
           groupId: invitation.group_id,
           groupName: groupName,
-          inviteeEmail: invitation.invitee_email,
           status: invitation.status,
           expiresAt: invitation.expires_at,
           isValid,

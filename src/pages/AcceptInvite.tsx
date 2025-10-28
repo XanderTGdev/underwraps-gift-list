@@ -17,7 +17,6 @@ export default function AcceptInvite() {
   const [groupName, setGroupName] = useState<string>("");
   const [invitation, setInvitation] = useState<any>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userEmail, setUserEmail] = useState<string>("");
 
   useEffect(() => {
     checkAuthAndInvitation();
@@ -33,7 +32,6 @@ export default function AcceptInvite() {
       // Check authentication
       const { data: { user } } = await supabase.auth.getUser();
       setIsAuthenticated(!!user);
-      setUserEmail(user?.email || "");
 
       // Use secure server-side token validation via edge function
       // This uses service role credentials server-side to bypass RLS
@@ -45,11 +43,7 @@ export default function AcceptInvite() {
       );
 
       if (validationError || !validationData?.success) {
-        console.error("Validation error:", {
-          error: validationError,
-          data: validationData,
-          token: token
-        });
+        console.error("Validation error:", { error: validationError, data: validationData });
         setStatus(validationData?.status || 'invalid');
         return;
       }
@@ -60,7 +54,6 @@ export default function AcceptInvite() {
       const invitation = {
         id: inviteData.id,
         group_id: inviteData.groupId,
-        invitee_email: inviteData.inviteeEmail,
         status: inviteData.status,
         expires_at: inviteData.expiresAt,
       };
@@ -113,19 +106,20 @@ export default function AcceptInvite() {
         return;
       }
 
-      // Check if user's email matches the invitation
-      if (user.email !== invitation.invitee_email) {
-        toast.error(`This invitation is for ${invitation.invitee_email}. Please log in with that email.`);
-        setStatus('invalid');
-        return;
-      }
-
-      // Use edge function for acceptance
+      // Use edge function for acceptance (email verification happens server-side)
       const { data, error } = await supabase.functions.invoke('accept-invitation', {
         body: { invitationId: invitation.id },
       });
 
-      if (error) throw error;
+      if (error) {
+        // Check if it's an email mismatch error (403)
+        if (error.message?.includes("different email address")) {
+          toast.error(error.message);
+          setStatus('invalid');
+          return;
+        }
+        throw error;
+      }
 
       if (data?.alreadyMember) {
         toast.info("You are already a member of this group");
@@ -247,25 +241,9 @@ export default function AcceptInvite() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-muted p-4 rounded-lg">
-              <p className="text-sm text-muted-foreground">
-                Invited email: <strong>{invitation?.invitee_email}</strong>
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Your email: <strong>{userEmail}</strong>
-              </p>
-            </div>
-            {userEmail !== invitation?.invitee_email && (
-              <div className="bg-warning/10 border border-warning p-3 rounded-lg">
-                <p className="text-sm text-warning font-medium">
-                  Email mismatch: This invitation is for a different email address.
-                </p>
-              </div>
-            )}
             <Button
               onClick={handleAcceptInvitation}
               className="w-full"
-              disabled={userEmail !== invitation?.invitee_email}
             >
               Accept Invitation
             </Button>
