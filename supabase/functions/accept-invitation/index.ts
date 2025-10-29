@@ -1,19 +1,15 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { handleCorsPreFlight, corsResponse, corsErrorResponse } from "../_shared/cors.ts";
 
 interface AcceptInvitationRequest {
   invitationId: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  // Handle CORS preflight
+  const preflightResponse = handleCorsPreFlight(req);
+  if (preflightResponse) return preflightResponse;
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -26,21 +22,15 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
-      console.error("Authentication error:", userError);
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.error("Authentication error");
+      return corsErrorResponse(req, 'Unauthorized', 401);
     }
 
     const { invitationId }: AcceptInvitationRequest = await req.json();
 
     // Validate inputs
     if (!invitationId || typeof invitationId !== 'string') {
-      return new Response(
-        JSON.stringify({ error: 'Invitation ID is required and must be a string' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return corsErrorResponse(req, 'Invitation ID is required and must be a string', 400);
     }
 
     // Fetch the invitation
@@ -51,35 +41,23 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (invitationError || !invitation) {
-      console.error("Invitation fetch error:", invitationError);
-      return new Response(
-        JSON.stringify({ error: 'Invitation not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.error("Invitation fetch error");
+      return corsErrorResponse(req, 'Invitation not found', 404);
     }
 
     // Verify the invitation is for the current user
     if (user.email !== invitation.invitee_email) {
-      return new Response(
-        JSON.stringify({ error: 'This invitation is for a different email address. Please log in with the correct account.' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return corsErrorResponse(req, 'This invitation is for a different email address. Please log in with the correct account.', 403);
     }
 
     // Check if already accepted
     if (invitation.status === 'accepted') {
-      return new Response(
-        JSON.stringify({ error: 'Invitation already accepted', alreadyAccepted: true }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return corsResponse(req, { error: 'Invitation already accepted', alreadyAccepted: true }, 400);
     }
 
     // Check if expired
     if (new Date(invitation.expires_at) <= new Date()) {
-      return new Response(
-        JSON.stringify({ error: 'Invitation has expired' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return corsErrorResponse(req, 'Invitation has expired', 400);
     }
 
     // Check if user is already a member
@@ -97,10 +75,7 @@ const handler = async (req: Request): Promise<Response> => {
         .update({ status: 'accepted' })
         .eq('id', invitationId);
 
-      return new Response(
-        JSON.stringify({ success: true, groupId: invitation.group_id, alreadyMember: true }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return corsResponse(req, { success: true, groupId: invitation.group_id, alreadyMember: true }, 200);
     }
 
     // Add user to group
@@ -112,11 +87,8 @@ const handler = async (req: Request): Promise<Response> => {
       });
 
     if (memberError) {
-      console.error("Group member insert error:", memberError);
-      return new Response(
-        JSON.stringify({ error: memberError.message }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.error("Group member insert error");
+      return corsErrorResponse(req, 'Failed to add member to group', 400);
     }
 
     // Ensure user has a role entry (use upsert to handle existing entries safely)
@@ -127,11 +99,8 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     if (roleError) {
-      console.error("User role upsert error:", roleError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to assign user role. Please contact support.' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.error("User role upsert error");
+      return corsErrorResponse(req, 'Failed to assign user role. Please contact support.', 500);
     }
 
     // Update invitation status
@@ -141,25 +110,16 @@ const handler = async (req: Request): Promise<Response> => {
       .eq('id', invitationId);
 
     if (updateError) {
-      console.error("Update invitation error:", updateError);
-      return new Response(
-        JSON.stringify({ error: updateError.message }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.error("Update invitation error");
+      return corsErrorResponse(req, 'Failed to update invitation status', 400);
     }
 
     console.log("Invitation accepted successfully:", invitationId);
 
-    return new Response(
-      JSON.stringify({ success: true, groupId: invitation.group_id }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return corsResponse(req, { success: true, groupId: invitation.group_id }, 200);
   } catch (error: any) {
-    console.error("Error in accept-invitation function:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error("Error in accept-invitation function");
+    return corsErrorResponse(req, 'Failed to accept invitation', 500);
   }
 };
 

@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { handleCorsPreFlight, corsResponse, corsErrorResponse } from "../_shared/cors.ts";
 
 interface AddItemRequest {
   wishlistId: string;
@@ -17,106 +13,69 @@ interface AddItemRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const preflightResponse = handleCorsPreFlight(req);
+  if (preflightResponse) return preflightResponse;
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const authHeader = req.headers.get('Authorization')!;
-    
+
     const supabase = createClient(supabaseUrl, supabaseKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
-      console.error("Authentication error:", userError);
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.error("Authentication error");
+      return corsErrorResponse(req, 'Unauthorized', 401);
     }
 
     const { wishlistId, title, url, price, imageUrl, note, currency }: AddItemRequest = await req.json();
 
     // Validate inputs
     if (!wishlistId || typeof wishlistId !== 'string') {
-      return new Response(
-        JSON.stringify({ error: 'Wishlist ID is required and must be a string' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return corsErrorResponse(req, 'Wishlist ID is required and must be a string', 400);
     }
 
     if (!title || typeof title !== 'string' || title.trim().length === 0) {
-      return new Response(
-        JSON.stringify({ error: 'Title is required and must be a non-empty string' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return corsErrorResponse(req, 'Title is required and must be a non-empty string', 400);
     }
 
     if (title.length > 500) {
-      return new Response(
-        JSON.stringify({ error: 'Title must be less than 500 characters' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return corsErrorResponse(req, 'Title must be less than 500 characters', 400);
     }
 
     if (url && typeof url !== 'string') {
-      return new Response(
-        JSON.stringify({ error: 'URL must be a string' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return corsErrorResponse(req, 'URL must be a string', 400);
     }
 
     if (url && url.length > 2048) {
-      return new Response(
-        JSON.stringify({ error: 'URL must be less than 2048 characters' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return corsErrorResponse(req, 'URL must be less than 2048 characters', 400);
     }
 
     if (price !== undefined && price !== null && (typeof price !== 'number' || price < 0)) {
-      return new Response(
-        JSON.stringify({ error: 'Price must be a positive number' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return corsErrorResponse(req, 'Price must be a positive number', 400);
     }
 
     if (imageUrl && typeof imageUrl !== 'string') {
-      return new Response(
-        JSON.stringify({ error: 'Image URL must be a string' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return corsErrorResponse(req, 'Image URL must be a string', 400);
     }
 
     if (imageUrl && imageUrl.length > 2048) {
-      return new Response(
-        JSON.stringify({ error: 'Image URL must be less than 2048 characters' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return corsErrorResponse(req, 'Image URL must be less than 2048 characters', 400);
     }
 
     if (note && typeof note !== 'string') {
-      return new Response(
-        JSON.stringify({ error: 'Note must be a string' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return corsErrorResponse(req, 'Note must be a string', 400);
     }
 
     if (note && note.length > 1000) {
-      return new Response(
-        JSON.stringify({ error: 'Note must be less than 1000 characters' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return corsErrorResponse(req, 'Note must be less than 1000 characters', 400);
     }
 
     if (currency && typeof currency !== 'string') {
-      return new Response(
-        JSON.stringify({ error: 'Currency must be a string' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return corsErrorResponse(req, 'Currency must be a string', 400);
     }
 
     // Verify the wishlist belongs to the user
@@ -127,18 +86,12 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (wishlistError || !wishlist) {
-      console.error("Wishlist fetch error:", wishlistError);
-      return new Response(
-        JSON.stringify({ error: 'Wishlist not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.error("Wishlist fetch error");
+      return corsErrorResponse(req, 'Wishlist not found', 404);
     }
 
     if (wishlist.user_id !== user.id) {
-      return new Response(
-        JSON.stringify({ error: 'You can only add items to your own wishlist' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return corsErrorResponse(req, 'You can only add items to your own wishlist', 403);
     }
 
     // Create the item
@@ -157,25 +110,16 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (insertError) {
-      console.error("Item insert error:", insertError);
-      return new Response(
-        JSON.stringify({ error: insertError.message }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.error("Item insert error");
+      return corsErrorResponse(req, 'Failed to create item', 400);
     }
 
     console.log("Item created successfully:", newItem.id);
 
-    return new Response(
-      JSON.stringify({ success: true, item: newItem }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return corsResponse(req, { success: true, item: newItem }, 200);
   } catch (error: any) {
-    console.error("Error in add-item function:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error("Error in add-item function");
+    return corsErrorResponse(req, 'Failed to add item', 500);
   }
 };
 
