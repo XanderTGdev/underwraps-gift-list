@@ -37,21 +37,12 @@ const DeleteGroupDialog = ({
         return;
       }
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-group`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ groupId }),
-        }
-      );
+      const { data, error } = await supabase.functions.invoke("delete-group", {
+        body: { groupId },
+      });
 
-      if (!response.ok) {
-        const error = await response.json();
-        toast.error(error.error || "Failed to delete group");
+      if (error) {
+        toast.error(error.message || "Failed to delete group");
         return;
       }
 
