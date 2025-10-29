@@ -1,6 +1,10 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { handleCorsPreFlight, corsResponse, corsErrorResponse } from "../_shared/cors.ts";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 interface CreateWishlistRequest {
   groupId: string;
@@ -9,8 +13,9 @@ interface CreateWishlistRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  const preflightResponse = handleCorsPreFlight(req);
-  if (preflightResponse) return preflightResponse;
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -23,8 +28,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
-      console.error("Authentication error");
-      return corsErrorResponse(req, 'Unauthorized', 401);
+      console.error("Authentication error:", userError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const { groupId, name, userFirstName }: CreateWishlistRequest = await req.json();
@@ -40,17 +48,26 @@ const handler = async (req: Request): Promise<Response> => {
     // Validate inputs
     if (!groupId || typeof groupId !== 'string') {
       console.log('Group ID is required and must be a string', groupId);
-      return corsErrorResponse(req, 'Group ID is required and must be a string', 400);
+      return new Response(
+        JSON.stringify({ error: 'Group ID is required and must be a string' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     if (name !== undefined && typeof name !== 'string') {
       console.log('Name must be a string', name);
-      return corsErrorResponse(req, 'Name must be a string', 400);
+      return new Response(
+        JSON.stringify({ error: 'Name must be a string' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     if (userFirstName !== undefined && typeof userFirstName !== 'string') {
       console.log('User first name must be a string', userFirstName);
-      return corsErrorResponse(req, 'User first name must be a string', 400);
+      return new Response(
+        JSON.stringify({ error: 'User first name must be a string' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Sanitize inputs
@@ -59,12 +76,18 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (sanitizedName && sanitizedName.length > 200) {
       console.log('Name must be less than 200 characters', sanitizedName);
-      return corsErrorResponse(req, 'Name must be less than 200 characters', 400);
+      return new Response(
+        JSON.stringify({ error: 'Name must be less than 200 characters' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     if (sanitizedFirstName && sanitizedFirstName.length > 100) {
       console.log('First name must be less than 100 characters', sanitizedFirstName);
-      return corsErrorResponse(req, 'First name must be less than 100 characters', 400);
+      return new Response(
+        JSON.stringify({ error: 'First name must be less than 100 characters' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Verify user is a member of the group
@@ -76,8 +99,11 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (membershipError || !membership) {
-      console.error("Membership check error");
-      return corsErrorResponse(req, 'You must be a member of this group to create wishlists', 403);
+      console.error("Membership check error:", membershipError);
+      return new Response(
+        JSON.stringify({ error: 'You must be a member of this group to create wishlists' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Helper to generate a unique default name like "John's Wishlist", "John's Wishlist 2", "John's Wishlist 3", ...
@@ -129,12 +155,18 @@ const handler = async (req: Request): Promise<Response> => {
         .limit(1);
 
       if (dupCheckError) {
-        console.error('Duplicate check error');
-        return corsErrorResponse(req, 'Could not verify uniqueness', 400);
+        console.error('Duplicate check error:', dupCheckError);
+        return new Response(
+          JSON.stringify({ error: 'Could not verify uniqueness' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
       if (dupCheck && dupCheck.length > 0) {
-        return corsResponse(req, { error: `You already have a wishlist named "${finalName}" in this group` }, 409);
+        return new Response(
+          JSON.stringify({ error: `You already have a wishlist named "${finalName}" in this group` }),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
     } else {
       finalName = await generateNextDefaultName(sanitizedFirstName);
@@ -158,18 +190,24 @@ const handler = async (req: Request): Promise<Response> => {
 
       if (!insertError && wishlist) {
         console.log('Wishlist created successfully:', wishlist.id);
-        return corsResponse(req, { success: true, wishlist }, 200);
+        return new Response(
+          JSON.stringify({ success: true, wishlist }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
       if (insertError) {
         const message = (insertError as any)?.message || '';
         const code = (insertError as any)?.code;
         const isUniqueViolation = insertStatus === 409 || code === '23505' || message.toLowerCase().includes('duplicate key value') || message.toLowerCase().includes('conflict');
-        console.warn('Insert attempt failed', { attempt: attempt + 1, finalName, insertStatus, code });
+        console.warn('Insert attempt failed', { attempt: attempt + 1, finalName, insertStatus, code, message });
 
         // If duplicate and the user explicitly chose the name, return 409 immediately
         if (isUniqueViolation && userProvidedName) {
-          return corsResponse(req, { error: `You already have a wishlist named "${finalName}" in this group` }, 409);
+          return new Response(
+            JSON.stringify({ error: `You already have a wishlist named "${finalName}" in this group` }),
+            { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
 
         // If duplicate while auto-generating, regenerate and retry
@@ -179,16 +217,25 @@ const handler = async (req: Request): Promise<Response> => {
           continue;
         }
 
-        console.error('Wishlist insert error');
-        return corsErrorResponse(req, 'Failed to create wishlist', 400);
+        console.error('Wishlist insert error:', insertError);
+        return new Response(
+          JSON.stringify({ error: message || 'Failed to create wishlist' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
     }
 
     // If we exhausted retries due to contention
-    return corsResponse(req, { error: 'Could not create wishlist due to concurrent requests. Please try again.' }, 409);
+    return new Response(
+      JSON.stringify({ error: 'Could not create wishlist due to concurrent requests. Please try again.' }),
+      { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   } catch (error: any) {
-    console.error("Error in create-wishlist function");
-    return corsErrorResponse(req, 'Failed to create wishlist', 500);
+    console.error("Error in create-wishlist function:", error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 };
 

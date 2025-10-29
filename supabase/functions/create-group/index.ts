@@ -1,14 +1,19 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { handleCorsPreFlight, corsResponse, corsErrorResponse } from "../_shared/cors.ts";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 interface CreateGroupRequest {
   name: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  const preflightResponse = handleCorsPreFlight(req);
-  if (preflightResponse) return preflightResponse;
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -25,8 +30,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
-      console.error("Authentication error");
-      return corsErrorResponse(req, 'Unauthorized', 401);
+      console.error("Authentication error:", userError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Better error handling for body parsing
@@ -35,8 +43,11 @@ const handler = async (req: Request): Promise<Response> => {
       requestBody = await req.json();
       console.log('Parsed request body:', requestBody);
     } catch (parseError) {
-      console.error("Error parsing request body");
-      return corsErrorResponse(req, 'Invalid JSON in request body', 400);
+      console.error("Error parsing request body:", parseError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const { name } = requestBody;
@@ -52,7 +63,10 @@ const handler = async (req: Request): Promise<Response> => {
     // Validate inputs
     if (!name || typeof name !== 'string') {
       console.error('Validation failed:', { name, type: typeof name });
-      return corsErrorResponse(req, 'Name is required and must be a non-empty string', 400);
+      return new Response(
+        JSON.stringify({ error: 'Name is required and must be a non-empty string' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Sanitize the name
@@ -60,11 +74,17 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (!sanitizedName || sanitizedName.length === 0) {
       console.error('Name is empty after sanitization');
-      return corsErrorResponse(req, 'Name is required and must be a non-empty string', 400);
+      return new Response(
+        JSON.stringify({ error: 'Name is required and must be a non-empty string' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     if (sanitizedName.length > 200) {
-      return corsErrorResponse(req, 'Name must be less than 200 characters', 400);
+      return new Response(
+        JSON.stringify({ error: 'Name must be less than 200 characters' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Create the group
@@ -78,13 +98,17 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (groupError) {
-      console.error("Group insert error:", {
+      console.error("Group insert error:", groupError);
+      console.error("Group error details:", {
         message: groupError.message,
         code: groupError.code,
         details: groupError.details,
         hint: groupError.hint,
       });
-      return corsErrorResponse(req, `Failed to create group: ${groupError.message}`, 400);
+      return new Response(
+        JSON.stringify({ error: `Failed to create group: ${groupError.message}` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     console.log("Group created successfully:", group.id);
@@ -99,7 +123,8 @@ const handler = async (req: Request): Promise<Response> => {
       });
 
     if (memberError) {
-      console.error("Group member insert error:", {
+      console.error("Group member insert error:", memberError);
+      console.error("Member error details:", {
         message: memberError.message,
         code: memberError.code,
         details: memberError.details,
@@ -117,7 +142,8 @@ const handler = async (req: Request): Promise<Response> => {
       });
 
     if (roleError) {
-      console.error("User role insert error:", {
+      console.error("User role insert error:", roleError);
+      console.error("Role error details:", {
         message: roleError.message,
         code: roleError.code,
         details: roleError.details,
@@ -127,10 +153,16 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Group created successfully with membership and roles:", group.id);
 
-    return corsResponse(req, { success: true, group }, 200);
+    return new Response(
+      JSON.stringify({ success: true, group }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   } catch (error: any) {
-    console.error("Error in create-group function");
-    return corsErrorResponse(req, 'Failed to create group', 500);
+    console.error("Error in create-group function:", error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 };
 

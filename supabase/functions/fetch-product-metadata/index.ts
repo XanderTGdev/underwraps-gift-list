@@ -1,7 +1,13 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { handleCorsPreFlight, corsResponse, corsErrorResponse } from "../_shared/cors.ts";
 
 // Product metadata fetcher - extracts product info from URLs
+// CORS headers for browser requests
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Max-Age": "86400",
+};
 
 interface RequestBody {
   url: string;
@@ -47,12 +53,15 @@ function getImage(html: string): string | undefined {
 
 function coercePriceStringToNumber(raw: string): number | undefined {
   if (!raw) return undefined;
+  // Remove currency symbols and spaces, normalize decimal separator
   const cleaned = raw.replace(/[^0-9.,]/g, "").trim();
   if (!cleaned) return undefined;
+  // If both comma and dot exist, assume comma is thousands sep and dot is decimal
   let normalized = cleaned;
   if (cleaned.includes(",") && cleaned.includes(".")) {
     normalized = cleaned.replace(/,/g, "");
   } else if (cleaned.includes(",") && !cleaned.includes(".")) {
+    // Assume comma is decimal
     normalized = cleaned.replace(/\./g, "").replace(",", ".");
   } else {
     normalized = cleaned;
@@ -71,6 +80,7 @@ function extractFromJsonLd(html: string): Partial<ProductMetadata> {
       const parsed = JSON.parse(jsonText);
       const nodes: any[] = Array.isArray(parsed) ? parsed : [parsed];
       for (const node of nodes) {
+        // Find a Product node, possibly within @graph
         const graphNodes: any[] = node?.['@graph'] && Array.isArray(node['@graph']) ? node['@graph'] : [node];
         for (const candidate of graphNodes) {
           const type = candidate?.['@type'] || candidate?.type;
@@ -95,6 +105,7 @@ function extractFromJsonLd(html: string): Partial<ProductMetadata> {
                 results.currency = offer.priceCurrency.toUpperCase();
               }
             }
+            // Stop after first reasonable Product
             if (results.title || results.imageUrl || results.price) {
               return results;
             }
@@ -109,6 +120,7 @@ function extractFromJsonLd(html: string): Partial<ProductMetadata> {
 }
 
 function extractPriceFromMeta(html: string): { price?: number; currency?: string } {
+  // Common meta tags
   const candidates: Array<["property" | "name", string]> = [
     ["property", "product:price:amount"],
     ["property", "og:price:amount"],
@@ -119,6 +131,7 @@ function extractPriceFromMeta(html: string): { price?: number; currency?: string
     const raw = getMetaContent(html, attr, key);
     const price = raw ? coercePriceStringToNumber(raw) : undefined;
     if (price !== undefined) {
+      // Try to find currency alongside
       const currency =
         getMetaContent(html, attr, key.replace("amount", "currency")) ||
         getMetaContent(html, "property", "og:price:currency") ||
@@ -131,10 +144,11 @@ function extractPriceFromMeta(html: string): { price?: number; currency?: string
 }
 
 async function fetchHtmlWithTimeout(url: string, timeoutMs = 8000): Promise<string> {
-  console.log("Fetching HTML with timeout:", url);
+  console.log("FHWT - fetchHtmlWithTimeout", url);
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
   try {
+    console.log("FHWT - 'try' - fetching url");
     const resp = await fetch(url, {
       headers: {
         "User-Agent":
@@ -144,50 +158,72 @@ async function fetchHtmlWithTimeout(url: string, timeoutMs = 8000): Promise<stri
       signal: controller.signal,
       redirect: "follow",
     });
+    console.log("FHWT - 'try' - resp", resp);
     const contentType = resp.headers.get("content-type") || "";
     if (!contentType.includes("text/html")) {
+      console.log("FHWT - 'if (!contentType.includes('text/html'))' - throwing error");
       throw new Error("URL is not an HTML page");
     }
     return await resp.text();
   } finally {
+    console.log("FHWT - 'finally' - clearing timeout");
     clearTimeout(id);
   }
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  const preflightResponse = handleCorsPreFlight(req);
-  if (preflightResponse) return preflightResponse;
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 200, headers: corsHeaders });
+  }
 
   try {
     const { url }: RequestBody = await req.json();
     console.log("Processing metadata request for URL:", url);
-
+    
+    // 1. Validation: Check if URL exists
     if (!url) {
       console.log("Missing URL in request");
-      return corsErrorResponse(req, "URL is required", 400);
+      return new Response(
+        JSON.stringify({ success: false, error: "URL is required" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
     }
 
+    // 2. Validation: Check if URL is a string
     if (typeof url !== "string") {
       console.log("URL is not a string");
-      return corsErrorResponse(req, "URL must be a string", 400);
+      return new Response(
+        JSON.stringify({ success: false, error: "URL must be a string" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
     }
 
+    // 3. Sanitization: Trim whitespace
     const trimmedUrl = url.trim();
 
+    // 4. Validation: Check URL length (prevent DoS)
     if (trimmedUrl.length > 2048) {
       console.log("URL exceeds maximum length");
-      return corsErrorResponse(req, "URL must be less than 2048 characters", 400);
+      return new Response(
+        JSON.stringify({ success: false, error: "URL must be less than 2048 characters" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
     }
 
+    // 5. Validation: Check if URL is valid HTTP(S)
     if (!isHttpUrl(trimmedUrl)) {
       console.log("Invalid HTTP(S) URL");
-      return corsErrorResponse(req, "A valid http(s) URL is required", 400);
+      return new Response(
+        JSON.stringify({ success: false, error: "A valid http(s) URL is required" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
     }
 
-    // Security: Prevent SSRF by blocking private IP ranges
+    // 6. Security: Prevent SSRF by blocking private IP ranges
     const urlObj = new URL(trimmedUrl);
     const hostname = urlObj.hostname.toLowerCase();
-
+    
+    // Block localhost and private networks
     const blockedPatterns = [
       /^localhost$/i,
       /^127\./,
@@ -200,20 +236,25 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (blockedPatterns.some(pattern => pattern.test(hostname))) {
       console.log("Blocked attempt to access private network:", hostname);
-      return corsErrorResponse(req, "Cannot access private network URLs", 400);
+      return new Response(
+        JSON.stringify({ success: false, error: "Cannot access private network URLs" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
     }
-
+    // 7. Business Logic: Fetch HTML with timeout protection
     console.log("Fetching HTML for URL:", trimmedUrl);
     const html = await fetchHtmlWithTimeout(trimmedUrl);
 
     const meta: ProductMetadata = {};
 
+    // Prefer JSON-LD Product schema for structured data
     const fromJsonLd = extractFromJsonLd(html);
     if (fromJsonLd.title) meta.title = fromJsonLd.title;
     if (fromJsonLd.imageUrl) meta.imageUrl = fromJsonLd.imageUrl;
     if (fromJsonLd.price !== undefined) meta.price = fromJsonLd.price;
     if (fromJsonLd.currency) meta.currency = fromJsonLd.currency;
 
+    // Fallbacks from OG/Twitter meta
     if (!meta.title) meta.title = getTitle(html);
     if (!meta.imageUrl) meta.imageUrl = getImage(html);
     if (meta.price === undefined) {
@@ -222,18 +263,32 @@ const handler = async (req: Request): Promise<Response> => {
       if (priceMeta.currency && !meta.currency) meta.currency = priceMeta.currency;
     }
 
-    return corsResponse(req, { success: true, ...meta }, 200);
+    return new Response(
+      JSON.stringify({ success: true, ...meta }),
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
+    );
   } catch (error: any) {
-    console.error("Error in fetch-product-metadata function");
-
-    const message = error?.name === "AbortError"
-      ? "Request timed out while fetching URL"
+    // Log detailed error server-side for debugging
+    console.error("Error in fetch-product-metadata function:", {
+      message: error?.message || error,
+      name: error?.name,
+      stack: error?.stack,
+    });
+    
+    // Map to user-friendly error messages (don't expose internal details)
+    const message = error?.name === "AbortError" 
+      ? "Request timed out while fetching URL" 
       : error?.message === "URL is not an HTML page"
-        ? "The URL does not point to a valid web page"
-        : "Unable to fetch product information";
-
-    return corsErrorResponse(req, message, 400);
+      ? "The URL does not point to a valid web page"
+      : "Unable to fetch product information";
+    
+    return new Response(
+      JSON.stringify({ success: false, error: message }),
+      { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+    );
   }
 };
 
 serve(handler);
+
+
