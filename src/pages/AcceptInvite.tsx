@@ -43,7 +43,7 @@ export default function AcceptInvite() {
       );
 
       if (validationError || !validationData?.success) {
-        console.error("Validation error:", { error: validationError, data: validationData });
+        console.error("Validation error: Failed to validate invitation");
         setStatus(validationData?.status || 'invalid');
         return;
       }
@@ -87,7 +87,7 @@ export default function AcceptInvite() {
 
       setStatus('invalid');
     } catch (error) {
-      console.error("Error checking invitation:", error);
+      console.error("Error checking invitation");
       setStatus('error');
     }
   };
@@ -135,7 +135,7 @@ export default function AcceptInvite() {
       }, 2000);
 
     } catch (error: any) {
-      console.error("Error accepting invitation:", error);
+      console.error("Error accepting invitation");
       toast.error(error.message || "Failed to accept invitation. Please try again.");
       setStatus('error');
     }

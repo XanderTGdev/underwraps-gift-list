@@ -51,7 +51,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Validate inputs
     if (!name || typeof name !== 'string') {
-      console.error('Validation failed:', { name, type: typeof name });
+      console.error('Validation failed: Invalid group name');
       return corsErrorResponse(req, 'Name is required and must be a non-empty string', 400);
     }
 
@@ -78,12 +78,7 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (groupError) {
-      console.error("Group insert error:", {
-        message: groupError.message,
-        code: groupError.code,
-        details: groupError.details,
-        hint: groupError.hint,
-      });
+      console.error("Group insert error: Failed to create group");
       return corsErrorResponse(req, `Failed to create group: ${groupError.message}`, 400);
     }
 
@@ -99,12 +94,7 @@ const handler = async (req: Request): Promise<Response> => {
       });
 
     if (memberError) {
-      console.error("Group member insert error:", {
-        message: memberError.message,
-        code: memberError.code,
-        details: memberError.details,
-        hint: memberError.hint,
-      });
+      console.error("Group member insert error: Failed to add member");
     }
 
     // Also add the owner role in user_roles table
@@ -117,12 +107,7 @@ const handler = async (req: Request): Promise<Response> => {
       });
 
     if (roleError) {
-      console.error("User role insert error:", {
-        message: roleError.message,
-        code: roleError.code,
-        details: roleError.details,
-        hint: roleError.hint,
-      });
+      console.error("User role insert error: Failed to assign role");
     }
 
     console.log("Group created successfully with membership and roles:", group.id);

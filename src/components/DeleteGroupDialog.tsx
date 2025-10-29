@@ -60,7 +60,7 @@ const DeleteGroupDialog = ({
       // Navigate back to groups page
       navigate("/groups");
     } catch (error: any) {
-      console.error("Error deleting group:", error);
+      console.error("Error deleting group");
       toast.error("Failed to delete group");
     } finally {
       setLoading(false);

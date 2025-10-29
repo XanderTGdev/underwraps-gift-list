@@ -98,7 +98,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
   } catch (e) {
-    console.error('CSP handler error', e);
+    console.error('CSP handler error: Failed to process CSP report');
   }
 
   return res.status(204).end();

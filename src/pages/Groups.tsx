@@ -95,7 +95,7 @@ const Groups = () => {
       setNewGroupName("");
       fetchGroups();
     } catch (error: any) {
-      console.error("Create group error:", error);
+      console.error("Create group error");
       toast.error(error.message || "Failed to create group");
     } finally {
       setCreating(false);

@@ -65,7 +65,7 @@ export const AdminGroupTable = () => {
 
         setGroups(formattedGroups);
       } catch (error) {
-        console.error("Error fetching groups:", error);
+        console.error("Error fetching groups");
         toast({
           title: "Error",
           description: "Failed to load groups.",

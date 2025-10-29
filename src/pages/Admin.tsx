@@ -18,7 +18,7 @@ const Admin = () => {
     const checkAdminStatus = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        
+
         if (!user) {
           navigate("/auth");
           return;
@@ -43,7 +43,7 @@ const Admin = () => {
 
         setIsAdmin(true);
       } catch (error) {
-        console.error("Error checking admin status:", error);
+        console.error("Error checking admin status");
         toast({
           title: "Error",
           description: "Failed to verify admin access.",
@@ -72,17 +72,17 @@ const Admin = () => {
     <Layout>
       <div className="container mx-auto py-8 px-4">
         <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
-        
+
         <Tabs defaultValue="users" className="w-full">
           <TabsList>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="groups">Groups</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="users" className="mt-6">
             <AdminUserTable />
           </TabsContent>
-          
+
           <TabsContent value="groups" className="mt-6">
             <AdminGroupTable />
           </TabsContent>

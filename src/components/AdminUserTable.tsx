@@ -81,7 +81,7 @@ export const AdminUserTable = () => {
 
       setUsers(usersWithRoles);
     } catch (error) {
-      console.error("Error fetching users:", error);
+      console.error("Error fetching users");
       toast({
         title: "Error",
         description: "Failed to load users.",
@@ -116,7 +116,7 @@ export const AdminUserTable = () => {
 
       fetchUsers();
     } catch (error: any) {
-      console.error("Error updating role:", error);
+      console.error("Error updating role");
       toast({
         title: "Error",
         description: error.message || "Failed to update user role.",
@@ -141,7 +141,7 @@ export const AdminUserTable = () => {
 
       fetchUsers();
     } catch (error: any) {
-      console.error("Error deleting user:", error);
+      console.error("Error deleting user");
       toast({
         title: "Error",
         description: error.message || "Failed to delete user.",
