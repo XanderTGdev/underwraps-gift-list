@@ -21,9 +21,8 @@ const signupSchema = z.object({
   email: z.string().trim().email({ message: "Invalid email address" }).max(255),
   password: z.string()
     .min(12, { message: "Password must be at least 12 characters" })
-    .regex(/[A-Z]/, { message: "Password must include an uppercase letter" })
-    .regex(/[a-z]/, { message: "Password must include a lowercase letter" })
-    .regex(/[0-9]/, { message: "Password must include a number" })
+    .regex(/[a-zA-Z]/, { message: "Password must include at least one letter" })
+    .regex(/[0-9]/, { message: "Password must include at least one number" })
 });
 
 const Auth = () => {
@@ -256,7 +255,7 @@ const Auth = () => {
                     />
                     <p className="text-xs text-gray-600 dark:text-slate-400 flex items-center gap-1">
                       <Shield className="w-3 h-3" />
-                      Use at least 12 characters with mix of letters, numbers & symbols
+                      For best security, use at least 12 characters with mix of letters, numbers & symbols.
                     </p>
                     {signupPassword && (
                       <div className="space-y-1">

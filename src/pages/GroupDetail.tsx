@@ -5,7 +5,7 @@ import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Users, Mail, Gift, Plus, Trash2 } from "lucide-react";
+import { Loader2, Users, Mail, Gift, Plus, Trash2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import InviteMemberDialog from "@/components/InviteMemberDialog";
 import CreateWishlistDialog from "@/components/CreateWishlistDialog";
@@ -165,6 +165,15 @@ const GroupDetail = () => {
   return (
     <Layout>
       <div className="max-w-6xl mx-auto">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate("/groups")}
+          className="gap-2 px-3 mb-4"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Groups
+        </Button>
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
             <h1 className="text-3xl font-bold">{groupName}</h1>
