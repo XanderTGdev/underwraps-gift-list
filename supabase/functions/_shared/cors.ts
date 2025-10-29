@@ -13,8 +13,8 @@ interface CorsConfig {
 const ALLOWED_ORIGINS: CorsConfig = {
   // Your production domain(s)
   production: [
-    'https://underwraps-gift-list.vercel.app',  // Update with your actual domain
-    'https://yourapp.vercel.app',               // Add any additional production domains
+    'https://app.digitaldeltawebdesign.com',      // Primary production domain
+    'https://underwraps-gift-list.vercel.app',    // Secondary Vercel domain
   ],
 
   // Vercel preview deployments (pattern matching)
