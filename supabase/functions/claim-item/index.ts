@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { handleCorsPreFlight, corsResponse, corsErrorResponse } from "../_shared/cors.ts";
 
 interface ClaimItemRequest {
   itemId: string;
@@ -14,73 +10,51 @@ interface ClaimItemRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const preflightResponse = handleCorsPreFlight(req);
+  if (preflightResponse) return preflightResponse;
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const authHeader = req.headers.get('Authorization')!;
-    
+
     const supabase = createClient(supabaseUrl, supabaseKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
-      console.error("Authentication error:", userError);
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.error("Authentication error");
+      return corsErrorResponse(req, 'Unauthorized', 401);
     }
 
     const { itemId, groupId, revealDate, note }: ClaimItemRequest = await req.json();
 
     // Validate inputs
     if (!itemId || typeof itemId !== 'string') {
-      return new Response(
-        JSON.stringify({ error: 'Item ID is required and must be a string' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return corsErrorResponse(req, 'Item ID is required and must be a string', 400);
     }
 
     if (!groupId || typeof groupId !== 'string') {
-      return new Response(
-        JSON.stringify({ error: 'Group ID is required and must be a string' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return corsErrorResponse(req, 'Group ID is required and must be a string', 400);
     }
 
     if (!revealDate || typeof revealDate !== 'string') {
-      return new Response(
-        JSON.stringify({ error: 'Reveal date is required and must be a string' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return corsErrorResponse(req, 'Reveal date is required and must be a string', 400);
     }
 
     // Validate date format
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(revealDate)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid date format. Use YYYY-MM-DD' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return corsErrorResponse(req, 'Invalid date format. Use YYYY-MM-DD', 400);
     }
 
     if (note && typeof note !== 'string') {
-      return new Response(
-        JSON.stringify({ error: 'Note must be a string' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return corsErrorResponse(req, 'Note must be a string', 400);
     }
 
     if (note && note.length > 1000) {
-      return new Response(
-        JSON.stringify({ error: 'Note must be less than 1000 characters' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return corsErrorResponse(req, 'Note must be less than 1000 characters', 400);
     }
 
     // Check if user is a member of the group
@@ -92,11 +66,8 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (membershipError || !membership) {
-      console.error("Membership check error:", membershipError);
-      return new Response(
-        JSON.stringify({ error: 'You must be a member of this group to claim items' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.error("Membership check error");
+      return corsErrorResponse(req, 'You must be a member of this group to claim items', 403);
     }
 
     // Check if the item belongs to a wishlist in this group
@@ -107,29 +78,20 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (itemError || !item || !item.wishlists) {
-      console.error("Item fetch error:", itemError);
-      return new Response(
-        JSON.stringify({ error: 'Item not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.error("Item fetch error");
+      return corsErrorResponse(req, 'Item not found', 404);
     }
 
     const wishlist = Array.isArray(item.wishlists) ? item.wishlists[0] : item.wishlists;
 
     // Prevent claiming own items
     if (wishlist.user_id === user.id) {
-      return new Response(
-        JSON.stringify({ error: 'You cannot claim your own wishlist items' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return corsErrorResponse(req, 'You cannot claim your own wishlist items', 403);
     }
 
     // Verify item belongs to the specified group
     if (wishlist.group_id !== groupId) {
-      return new Response(
-        JSON.stringify({ error: 'Item does not belong to this group' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return corsErrorResponse(req, 'Item does not belong to this group', 403);
     }
 
     // Create the claim
@@ -146,25 +108,16 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (claimError) {
-      console.error("Claim insert error:", claimError);
-      return new Response(
-        JSON.stringify({ error: claimError.message }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.error("Claim insert error");
+      return corsErrorResponse(req, 'Failed to claim item', 400);
     }
 
     console.log("Item claimed successfully:", claim.id);
 
-    return new Response(
-      JSON.stringify({ success: true, claimId: claim.id }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return corsResponse(req, { success: true, claimId: claim.id }, 200);
   } catch (error: any) {
-    console.error("Error in claim-item function:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error("Error in claim-item function");
+    return corsErrorResponse(req, 'Failed to claim item', 500);
   }
 };
 
