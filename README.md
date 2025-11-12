@@ -1,73 +1,99 @@
-# Welcome to your Lovable project
+## UnderWraps Gift List
 
-## Project info
+Collaborative gift lists for families, friends, and groups. Create groups, share wishlists, privately claim gifts, and keep the surprise intact until reveal day.
 
-**URL**: https://lovable.dev/projects/8bc377e3-aea0-47c0-a3ee-8f7b4e1aecf5
+### Features
 
-## How can I edit this code?
+- **Groups and invitations**: Create groups, invite members via email, and manage memberships.
+- **Roles and permissions**: Owner/Admin/Member roles for safe administration.
+- **Wishlists**: Multiple wishlists per group with items, images, links, prices, and notes.
+- **Private claiming**: Claim and unclaim items without spoiling surprises; respect a configurable reveal date.
+- **Smart links**: Auto-fetch product metadata (title/image) from URLs.
+- **Email delivery**: Sends invitation emails via Resend.
+- **Modern UI**: Built with React, TypeScript, shadcn-ui, and Tailwind. Fully responsive.
+- **Supabase backend**: Auth, Postgres, RLS, and Edge Functions.
 
-There are several ways of editing your application.
+### Tech stack
 
-**Use Lovable**
+- **Frontend**: Vite, React, TypeScript, shadcn-ui, Tailwind CSS, TanStack Query, React Router
+- **Backend**: Supabase (Auth, Postgres, RLS, Edge Functions)
+- **Email**: Resend
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/8bc377e3-aea0-47c0-a3ee-8f7b4e1aecf5) and start prompting.
+### Getting started
 
-Changes made via Lovable will be committed automatically to this repo.
+Prerequisites:
+- Node.js 18+ and npm
+- A Supabase project and the Supabase CLI (optional but recommended)
+- Resend account (for email invites)
 
-**Use your preferred IDE**
+1) Install dependencies
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
+```bash
 npm i
+```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+2) Configure environment variables (frontend)
+
+Create `.env.local` in the repo root:
+
+```bash
+VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+VITE_SUPABASE_ANON_KEY=your_anon_key_here
+```
+
+3) Initialize Supabase (database + functions)
+
+```bash
+# Link your Supabase project
+supabase link --project-ref YOUR_PROJECT_REF
+
+# Apply the schema
+supabase db push
+
+# Set Edge Function secrets in Supabase Dashboard
+#   RESEND_API_KEY  (from resend.com)
+#   FROM_EMAIL      (e.g., noreply@yourdomain.com)
+#   APP_BASE_URL    (your deployed app URL)
+
+# Deploy edge functions
+supabase functions deploy
+```
+
+4) Start the app
+
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Available scripts
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+- `npm run dev`: Start the Vite dev server
+- `npm run build`: Production build
+- `npm run preview`: Preview the production build locally
+- `npm run lint`: Run ESLint
 
-**Use GitHub Codespaces**
+### Deploy
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+The frontend is a static site and can be deployed to any static host (e.g., Vercel, Netlify, Cloudflare Pages). Ensure you:
+- Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in your hosting provider’s environment variables
+- Deploy Supabase Edge Functions and set required secrets in the Supabase Dashboard
 
-## What technologies are used for this project?
+Example (Vercel):
+1. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in Vercel Project Settings → Environment Variables
+2. `supabase functions deploy` for server functions and set `RESEND_API_KEY`, `FROM_EMAIL`, `APP_BASE_URL` in Supabase
+3. Trigger a Vercel deployment
 
-This project is built with:
+### Documentation
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- `QUICK_START.md`: Fast setup checklist
+- `ENVIRONMENT_VARIABLES.md`: All env vars explained
+- `SUPABASE_MIGRATION_GUIDE.md`: Detailed Supabase notes and troubleshooting
+- `MIGRATION_SUMMARY.md`: Summary of database and policy changes
 
-## How can I deploy this project?
+### Directory overview
 
-Simply open [Lovable](https://lovable.dev/projects/8bc377e3-aea0-47c0-a3ee-8f7b4e1aecf5) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- `src/pages`: App routes (auth, groups, wishlists, admin, etc.)
+- `src/components`: UI and feature components (dialogs, tables, forms)
+- `src/integrations/supabase`: Supabase client and generated types
+- `supabase/functions`: Edge Functions (invitations, wishlist actions, metadata fetch, etc.)
+- `supabase/migrations`: Database schema and RLS policies
