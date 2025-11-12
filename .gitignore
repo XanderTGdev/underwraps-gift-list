@@ -26,3 +26,13 @@ dist-ssr
 # Supabase
 supabase/.temp
 supabase/.branches
+
+# Root env files
+.env
+.env.*
+!.env.example
+
+# Supabase local env
+supabase/.env
+supabase/.env.*
+!supabase/.env.example
